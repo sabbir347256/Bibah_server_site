@@ -26,6 +26,7 @@ export type IUser = {
     birth: string;
     gender: string;
     profession: string;
+    customProfession: string;
     email: string;
     contactNo: string;
     nidNo: string;
@@ -37,8 +38,14 @@ export type IUser = {
     verificationExpiry?: Date;      
     isDeleted: boolean;
     isApproved: boolean;
-    presentAddress: string;         
-    permanentAddress: string;
+    currentCountry: string;         
+    currentDivision: string;         
+    currentDistrict: string;         
+    currentThana: string;         
+    permanentCountry: string;
+    permanentDivision: string;
+    permanentDistrict: string;
+    permanentThana: string;
     role: Role;
     isActive?: IsActive;
     auths: IsAuthProvider[];

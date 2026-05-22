@@ -6,14 +6,38 @@ import { sendVerificationEmail } from "../utils/email.utils";
 import appError from "../../errorsHelper/appError";
 import { utils } from "../utils/utils";
 
+interface MulterRequest extends Request {
+    file?: Express.Multer.File;
+}
+
 const registerUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const userData = req.body;
+        const userData = { ...req.body };
+        const file = (req as MulterRequest).file;
+
+        if (userData.auths && typeof userData.auths === "string") {
+            try {
+                userData.auths = JSON.parse(userData.auths);
+            } catch (e) {
+                console.error("Auths parsing error, keeping original");
+            }
+        }
+
+        if (file) {
+            userData.profileImage = file.path || (file as any).location || file.filename;
+        }
+
 
         const isExist = await User.findOne({ email: userData.email });
 
+
+
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
         const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
+
+        if (!userData.password) {
+            throw new appError(StatusCodes.BAD_REQUEST, "Password is required!");
+        }
         const hashedPassword = await bcryptjs.hash(userData.password, 10);
 
         let userRecord;
@@ -45,6 +69,7 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
         await userRecord.save();
 
         const result = userRecord.toObject();
+        console.log('result', result);
         delete (result as any).password;
         delete (result as any).verificationCode;
 
@@ -62,6 +87,8 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
 const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { email, code } = req.body;
+
+        console.log('kahdfa', req.body)
 
         if (!email || !code) {
             throw new appError(StatusCodes.BAD_REQUEST, "Email and Code are required!");
