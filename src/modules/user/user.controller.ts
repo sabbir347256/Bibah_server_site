@@ -5,6 +5,9 @@ import bcryptjs from "bcryptjs";
 import { sendVerificationEmail } from "../utils/email.utils";
 import appError from "../../errorsHelper/appError";
 import { utils } from "../utils/utils";
+import httpStatus from "http-status-codes";
+import { JwtPayload } from "jsonwebtoken";
+
 
 interface MulterRequest extends Request {
     file?: Express.Multer.File;
@@ -27,10 +30,14 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
             userData.profileImage = file.path || (file as any).location || file.filename;
         }
 
-
         const isExist = await User.findOne({ email: userData.email });
 
-
+        if (userData.bonusRefarelID) {
+            const referrerExist = await User.findOne({ ownRefarelID: userData.bonusRefarelID });
+            if (!referrerExist) {
+                throw new appError(StatusCodes.BAD_REQUEST, "Invalid referral ID!");
+            }
+        }
 
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
         const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
@@ -69,7 +76,6 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
         await userRecord.save();
 
         const result = userRecord.toObject();
-        console.log('result', result);
         delete (result as any).password;
         delete (result as any).verificationCode;
 
@@ -87,20 +93,21 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
 const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { email, code } = req.body;
-
-        console.log('kahdfa', req.body)
+        console.log(email)
+        console.log(code)
 
         if (!email || !code) {
             throw new appError(StatusCodes.BAD_REQUEST, "Email and Code are required!");
         }
 
         const user = await User.findOne({ email });
+        console.log(user)
 
         if (!user) {
             throw new appError(StatusCodes.NOT_FOUND, "User not found with this email!");
         }
 
-        if (user.isVerified) {
+        if (user.isVerified === true) {
             throw new appError(StatusCodes.BAD_REQUEST, "User is already verified!");
         }
 
@@ -112,8 +119,14 @@ const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
             throw new appError(StatusCodes.BAD_REQUEST, "Verification code has expired!");
         }
 
+        if (user.bonusRefarelID) {
+            await User.findOneAndUpdate(
+                { ownRefarelID: user.bonusRefarelID },
+                { $inc: { walletPoints: 100 } }
+            );
+        }
+
         user.isVerified = true;
-        user.isActive = "ACTIVE" as any;
         user.verificationStage = 'OTP verified';
         user.verificationCode = null as any;
         user.verificationExpiry = null as any;
@@ -138,7 +151,48 @@ const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
+const getMyProfile = async (req: Request, res: Response) => {
+    try {
+        const userPayload = req.user as JwtPayload;
+
+        if (!userPayload || !userPayload.email) {
+            return res.status(httpStatus.UNAUTHORIZED).json({
+                success: false,
+                message: "Invalid token or user not authenticated",
+            });
+        }
+
+        const user = await User.findOne({ email: userPayload.email });
+
+        if (!user) {
+            return res.status(httpStatus.NOT_FOUND).json({
+                success: false,
+                message: "User not found in database",
+            });
+        }
+
+        return utils.sendResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: "User profile retrieved successfully",
+            data: user,
+        });
+
+        // res.status(httpStatus.OK).json({
+        //     success: true,
+        //     message: "User profile retrieved successfully",
+        //     data: user,
+        // });
+    } catch (error: any) {
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message || "Something went wrong",
+        });
+    }
+};
+
 export const userControllers = {
     registerUser,
     verifyEmail,
+    getMyProfile
 };

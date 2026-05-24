@@ -20,11 +20,25 @@ app.use(
   }),
 );
 
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173", 
+      "http://localhost:5000", 
+      "https://bdapis.vercel.app/geo/v2.0"
+    ],
+    credentials: true, 
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors());
+
 
 app.use("/api/v1", router);
 

@@ -13,13 +13,18 @@ const UserSchema: Schema<IUser> = new Schema(
     {
         userID: { type: String, unique: true },
         ownRefarelID: { type: String, unique: true },
-        bonusRefarelID: { type: String, unique: true},
+        bonusRefarelID: { type: String, default: null },
+        bonusWalletPoints: { type: Number, default: 0 },
+        agentReferWalletPoints: { type: Number, default: 0 },
+        mainWalletBalance: { type: Number, default: 0 },
+        walletPoints: { type: Number, default: 0 },
         fullName: { type: String, required: true, trim: true },
         email: { type: String, required: true, unique: true, lowercase: true, trim: true },
         birth: { type: String, required: true },
+        age: { type: Number },
         gender: { type: String, required: true },
         profession: { type: String, required: true },
-        customProfession: { type: String},
+        customProfession: { type: String },
         contactNo: { type: String, required: true, unique: true, trim: true },
         nidNo: { type: String, required: true, unique: true, trim: true },
         password: { type: String, required: true },
@@ -32,6 +37,7 @@ const UserSchema: Schema<IUser> = new Schema(
         currentDistrict: { type: String },
         currentThana: { type: String },
         profileImage: { type: String, default: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png" },
+        coverImage: { type: String, default: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png" },
         isVerified: { type: Boolean, default: false },
         verificationStage: { type: String, default: null },
         verificationCode: { type: String, default: null },
@@ -45,8 +51,24 @@ const UserSchema: Schema<IUser> = new Schema(
     { timestamps: true, versionKey: false }
 );
 
+const calculateAge = (birthDateString: string): number => {
+    const today = new Date();
+    const birthDate = new Date(birthDateString);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+};
+
 UserSchema.pre("save", async function () {
     const user = this as any;
+
+    if (user.birth) {
+        user.age = calculateAge(user.birth);
+    }
 
     if (!user.userID) {
         const lastUser = await mongoose.model("User").findOne({}, {}, { sort: { createdAt: -1 } });
