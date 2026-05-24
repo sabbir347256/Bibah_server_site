@@ -4,9 +4,11 @@ import { generateToken } from "./jwt";
 
 export const createUserToken = async(user : Partial<IUser>) => {
     const jwtPayload = {
-        email: user.email,
-        userId: user._id,
-        role: user.role,
+        email: user?.email,
+        userId: user?._id,
+        role: user?.role,
+        profileImage : user?.profileImage,
+        name : user?.fullName
       };
     
       const accessToken = generateToken(jwtPayload,envVars.JWT_ACCESS_SECRET,String(envVars.JWT_ACCESS_EXPIRES));
