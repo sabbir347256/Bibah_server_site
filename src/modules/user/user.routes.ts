@@ -7,9 +7,13 @@ import { profileUnlockController } from "../profileunlock/profileunlock.controll
 
 const router = Router();
 
+
+router.get("/", userControllers.getAllUsers);
 router.post("/register", upload.single('image'), userControllers.registerUser);
 router.post("/verify-email", userControllers.verifyEmail);
 router.get('/get-profile',checkAuth(Role.ADMIN,Role.USER,Role.AGENT), userControllers.getMyProfile);
 router.post("/profile/unlock", checkAuth(Role.USER), profileUnlockController.unlockProfile);
+router.post("/details/:id", profileUnlockController.getProfileDetails);
+router.post("/unlock/:id", profileUnlockController.unlockProfile);
 
 export const userRoutes = router;

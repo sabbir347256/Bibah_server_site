@@ -21,6 +21,7 @@ export const sendResponse = <T>(
 
   const responseObj: any = {
     statusCode,
+    meta,
     success,
     message,
     data,

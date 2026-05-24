@@ -7,6 +7,7 @@ import appError from "../../errorsHelper/appError";
 import { utils } from "../utils/utils";
 import httpStatus from "http-status-codes";
 import { JwtPayload } from "jsonwebtoken";
+import QueryBuilder from "../utils/queryBuilder";
 
 
 interface MulterRequest extends Request {
@@ -101,7 +102,6 @@ const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
         }
 
         const user = await User.findOne({ email });
-        console.log(user)
 
         if (!user) {
             throw new appError(StatusCodes.NOT_FOUND, "User not found with this email!");
@@ -178,11 +178,6 @@ const getMyProfile = async (req: Request, res: Response) => {
             data: user,
         });
 
-        // res.status(httpStatus.OK).json({
-        //     success: true,
-        //     message: "User profile retrieved successfully",
-        //     data: user,
-        // });
     } catch (error: any) {
         res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
             success: false,
@@ -191,8 +186,38 @@ const getMyProfile = async (req: Request, res: Response) => {
     }
 };
 
+const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const searchableFields = ["fullName", "email", "contactNo", "profession"];
+
+        const userQuery = new QueryBuilder(User.find({ isDeleted: false }), req.query)
+            .search(searchableFields)
+            .filter()
+            .sort()
+            .paginate()
+            .fields();
+
+        const result = await userQuery.modelQuery;
+        const meta = await userQuery.countTotal();
+
+        return utils.sendResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            meta,
+            message: "Users fetched successfully",
+            data: result,
+        });
+
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
 export const userControllers = {
     registerUser,
     verifyEmail,
-    getMyProfile
+    getMyProfile,
+    getAllUsers
 };
