@@ -1,14 +1,15 @@
-import { NextFunction, Request, Response, response } from "express";
+import { NextFunction, Request, Response } from "express";
 import appError from "../../errorsHelper/appError";
 import { ProfileUnlock } from "./profileunlock.mode";
 import { StatusCodes } from "http-status-codes";
 import { User } from "../user/user.model";
 import { utils } from "../utils/utils";
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 
 const unlockProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const viewerId = (req as any).user?.id;
+        const viewerId = (req as any).user?.userId || (req as any).user?.id || (req as any).user?._id;
         const { targetUserId } = req.body;
 
         if (!targetUserId || typeof targetUserId !== "string") {
@@ -75,11 +76,27 @@ const unlockProfile = async (req: Request, res: Response, next: NextFunction) =>
 
 const getProfileDetails = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const viewerId = (req as any).user?.id;
         const { id } = req.params;
-
         if (!id) {
             throw new appError(StatusCodes.BAD_REQUEST, "Profile ID is required!");
+        }
+
+        let viewerId = null;
+        const authHeader = req.headers.authorization;
+
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+            const token = authHeader.split(" ")[1];
+            
+            if (token && token !== "null" && token !== "undefined") {
+                try {
+                    const secretKey = process.env.JWT_ACCESS_SECRET || "secret";
+                    const decoded = jwt.verify(token, secretKey as string) as any;
+                    viewerId = decoded?.userId || decoded?.id || decoded?._id;
+                } catch (jwtError) {
+                    console.error("JWT Verification Error on Refresh:", jwtError);
+                    viewerId = null;
+                }
+            }
         }
 
         const targetUser = await User.findById(id).select("-password");
@@ -87,13 +104,17 @@ const getProfileDetails = async (req: Request, res: Response, next: NextFunction
             throw new appError(StatusCodes.NOT_FOUND, "User not found!");
         }
 
-        const isUnlocked = await ProfileUnlock.findOne({
-            unlockedBy: new mongoose.Types.ObjectId(viewerId),
-            targetProfile: new mongoose.Types.ObjectId(id as string),
-        });
+        let isUnlocked = false;
+        if (viewerId) {
+            const unlockRecord = await ProfileUnlock.findOne({
+                unlockedBy: new mongoose.Types.ObjectId(viewerId),
+                targetProfile: new mongoose.Types.ObjectId(id as string),
+            });
+            isUnlocked = !!unlockRecord;
+        }
 
-        const isOwnProfile = viewerId === id;
-        const showContactDetails = !!isUnlocked || isOwnProfile;
+        const isOwnProfile = viewerId && viewerId.toString() === id.toString();
+        const showContactDetails = isUnlocked || isOwnProfile;
 
         const responseData = targetUser.toObject();
         if (!showContactDetails) {
