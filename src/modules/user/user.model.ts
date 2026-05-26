@@ -13,7 +13,7 @@ const UserSchema: Schema<IUser> = new Schema(
     {
         userID: { type: String, unique: true },
         ownRefarelID: { type: String, unique: true },
-        bonusRefarelID: { type: String, default: null },
+        bonusRefarelID: { type: String, default: null,index: true },
         bonusWalletPoints: { type: Number, default: 0 },
         agentReferWalletPoints: { type: Number, default: 0 },
         mainWalletBalance: { type: Number, default: 0 },
@@ -68,6 +68,18 @@ UserSchema.pre("save", async function () {
 
     if (user.birth) {
         user.age = calculateAge(user.birth);
+    }
+
+    if (user.bonusRefarelID) {
+        if (typeof user.bonusRefarelID === "string") {
+            user.bonusRefarelID = user.bonusRefarelID.trim();
+        }
+        // যদি ফাকা স্ট্রিং হয়, তবে ডেটাবেজে null সেট করবে
+        if (user.bonusRefarelID === "") {
+            user.bonusRefarelID = null;
+        }
+    } else {
+        user.bonusRefarelID = null;
     }
 
     if (!user.userID) {

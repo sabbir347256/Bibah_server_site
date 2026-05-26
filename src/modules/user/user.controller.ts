@@ -9,6 +9,7 @@ import httpStatus from "http-status-codes";
 import { JwtPayload } from "jsonwebtoken";
 import QueryBuilder from "../utils/queryBuilder";
 import jwt from "jsonwebtoken";
+import { authenticate } from "passport";
 
 
 interface MulterRequest extends Request {
@@ -34,12 +35,14 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
 
         const isExist = await User.findOne({ email: userData.email });
 
-        if (userData.bonusRefarelID) {
-            const referrerExist = await User.findOne({ ownRefarelID: userData.bonusRefarelID });
-            if (!referrerExist) {
-                throw new appError(StatusCodes.BAD_REQUEST, "Invalid referral ID!");
-            }
-        }
+        // if (userData.bonusRefarelID && userData.bonusRefarelID.trim() !== "") {
+        //     const referrerExist = await User.findOne({ ownRefarelID: userData.bonusRefarelID });
+        //     if (!referrerExist) {
+        //         throw new appError(StatusCodes.BAD_REQUEST, "Invalid referral ID!");
+        //     }
+        // } else {
+        //     delete userData.bonusRefarelID;
+        // }
 
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
         const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
@@ -191,14 +194,17 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const searchableFields = ["fullName", "email", "contactNo", "profession"];
 
-        let queryCondition: any = { isDeleted: false };
+        let queryCondition: any = {
+            isDeleted: false,
+            email: { $ne: "superadmin@gmail.com" }
+        };
 
         const authHeader = req.headers.authorization;
         if (authHeader && authHeader.startsWith("Bearer ")) {
             const token = authHeader.split(" ")[1];
             try {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
-                const currentUserId = decoded?._id || decoded?.id;
+                const decoded = jwt.verify(token as string, process.env.JWT_ACCESS_SECRET as string) as any;
+                const currentUserId = decoded?.userId || decoded?.id;
 
                 if (currentUserId) {
                     queryCondition._id = { $ne: currentUserId };
