@@ -6,6 +6,7 @@ export const createUserToken = async(user : Partial<IUser>) => {
     const jwtPayload = {
         email: user?.email,
         userId: user?._id,
+        userProfileId: user?.userID,
         role: user?.role,
         profileImage : user?.profileImage,
         name : user?.fullName

@@ -8,6 +8,7 @@ import { utils } from "../utils/utils";
 import httpStatus from "http-status-codes";
 import { JwtPayload } from "jsonwebtoken";
 import QueryBuilder from "../utils/queryBuilder";
+import jwt from "jsonwebtoken";
 
 
 interface MulterRequest extends Request {
@@ -190,7 +191,23 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const searchableFields = ["fullName", "email", "contactNo", "profession"];
 
-        const userQuery = new QueryBuilder(User.find({ isDeleted: false }), req.query)
+        let queryCondition: any = { isDeleted: false };
+
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+            const token = authHeader.split(" ")[1];
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+                const currentUserId = decoded?._id || decoded?.id;
+
+                if (currentUserId) {
+                    queryCondition._id = { $ne: currentUserId };
+                }
+            } catch (tokenError) {
+            }
+        }
+
+        const userQuery = new QueryBuilder(User.find(queryCondition), req.query)
             .search(searchableFields)
             .filter()
             .sort()
@@ -208,9 +225,57 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
             data: result,
         });
 
-
     } catch (error) {
         next(error);
+    }
+};
+
+const updateUserStatus = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const result = await User.findByIdAndUpdate(
+            id,
+            { isActive: status },
+            { new: true, runValidators: true }
+        );
+
+        if (!result) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "User status updated successfully",
+            data: result,
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const deleteUser = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const result = await User.findByIdAndUpdate(
+            id,
+            { isDeleted: true },
+            { new: true }
+        );
+
+        if (!result) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "User deleted successfully",
+            data: result,
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -219,5 +284,7 @@ export const userControllers = {
     registerUser,
     verifyEmail,
     getMyProfile,
-    getAllUsers
+    getAllUsers,
+    updateUserStatus,
+    deleteUser
 };
