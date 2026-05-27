@@ -35,37 +35,27 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
 
         const isExist = await User.findOne({ email: userData.email });
 
-        // if (userData.bonusRefarelID && userData.bonusRefarelID.trim() !== "") {
-        //     const referrerExist = await User.findOne({ ownRefarelID: userData.bonusRefarelID });
-        //     if (!referrerExist) {
-        //         throw new appError(StatusCodes.BAD_REQUEST, "Invalid referral ID!");
-        //     }
-        // } else {
-        //     delete userData.bonusRefarelID;
-        // }
-
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
+        if (isExist && isExist.isVerified) {
+            throw new appError(StatusCodes.BAD_REQUEST, "Email already registered and verified!");
+        }
 
         if (!userData.password) {
             throw new appError(StatusCodes.BAD_REQUEST, "Password is required!");
         }
         const hashedPassword = await bcryptjs.hash(userData.password, 10);
 
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
+
         let userRecord;
 
         if (isExist) {
-            if (isExist.isVerified) {
-                throw new appError(StatusCodes.BAD_REQUEST, "Email already registered and verified!");
-            }
-
             Object.assign(isExist, userData, {
                 password: hashedPassword,
                 verificationCode: otpCode,
                 verificationExpiry: expiryTime,
                 isVerified: false,
             });
-
             userRecord = isExist;
         } else {
             userRecord = new User({
@@ -98,8 +88,6 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
 const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { email, code } = req.body;
-        console.log(email)
-        console.log(code)
 
         if (!email || !code) {
             throw new appError(StatusCodes.BAD_REQUEST, "Email and Code are required!");
@@ -119,7 +107,7 @@ const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
             throw new appError(StatusCodes.BAD_REQUEST, "Invalid verification code!");
         }
 
-        if (user.verificationExpiry && new Date() > user.verificationExpiry) {
+        if (!user.verificationExpiry || new Date() > user.verificationExpiry) {
             throw new appError(StatusCodes.BAD_REQUEST, "Verification code has expired!");
         }
 
@@ -132,8 +120,8 @@ const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
 
         user.isVerified = true;
         user.verificationStage = 'OTP verified';
-        user.verificationCode = null as any;
-        user.verificationExpiry = null as any;
+        user.verificationCode = undefined as any;
+        user.verificationExpiry = undefined as any;
         await user.save();
 
         return utils.sendResponse(res, {
@@ -285,6 +273,48 @@ const deleteUser = async (req: Request, res: Response) => {
     }
 };
 
+const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const updateData = { ...req.body };
+
+        delete updateData.password;
+        delete updateData.role;
+        delete updateData.mainWalletBalance;
+        delete updateData.bonusWalletPoints;
+        delete updateData.walletPoints;
+        delete updateData.agentReferWalletPoints;
+        delete updateData.ownRefarelID;
+        delete updateData.userID;
+
+        const userIdentifier = (req as any).user?.email || updateData.email;
+
+        if (!userIdentifier) {
+            throw new appError(StatusCodes.BAD_REQUEST, "User identity is required to update profile.");
+        }
+
+        const user = await User.findOne({ email: userIdentifier });
+
+        if (!user) {
+            throw new appError(StatusCodes.NOT_FOUND, "User profile not found.");
+        }
+
+        Object.assign(user, updateData);
+
+        await user.save();
+
+        const result = user.toObject();
+        delete (result as any).password;
+
+        return utils.sendResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: "Profile updated successfully.",
+            data: result,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 
 export const userControllers = {
     registerUser,
@@ -292,5 +322,6 @@ export const userControllers = {
     getMyProfile,
     getAllUsers,
     updateUserStatus,
-    deleteUser
+    deleteUser,
+    updateProfile
 };

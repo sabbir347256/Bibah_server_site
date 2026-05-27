@@ -75,7 +75,10 @@ const updateTransactionStatus = async (req: Request, res: Response) => {
                 transaction.userObjectId,
                 {
                     $set: { isActive: IsActive.ACTIVE },
-                    $inc: { mainWalletBalance: amountToAdd }
+                    $inc: {
+                        mainWalletBalance: amountToAdd,
+                        bonusWalletPoints: amountToAdd
+                    }
                 },
                 { new: true }
             );

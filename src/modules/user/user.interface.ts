@@ -28,11 +28,18 @@ export type IUser = {
     userID: string;
     ownRefarelID: string;
     bonusRefarelID: string;
+    Height: string;
+    maritalStatus: string;
+    professionOrganization: string;
     bonusWalletPoints: number;
     agentReferWalletPoints: number;
     mainWalletBalance: number;
     walletPoints: number;
     fullName: string;
+    institute: string;
+    education: string;
+    fatherOccupation: string;
+    motherOccupation: string;
     birth: string;
     age: number;
     gender: string;
