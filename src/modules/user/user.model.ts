@@ -19,6 +19,7 @@ const UserSchema: Schema<IUser> = new Schema(
         mainWalletBalance: { type: Number, default: 0 },
         walletPoints: { type: Number, default: 0 },
         fullName: { type: String, required: true, trim: true },
+        religion: { type: String, required: true },
         Height: { type: String, default : null },
         maritalStatus: { type: String, default : null },
         education: { type: String, default : null },

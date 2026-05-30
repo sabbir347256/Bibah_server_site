@@ -15,7 +15,7 @@ export const sendVerificationEmail = async (email: string, code: string) => {
   });
 
   const mailOptions = {
-    from: '"Bibah" <bibahdotapp@gmail.com>', 
+    from: '"Bibah" <bibah@bibah.app>', 
     to: email,
     subject: "Verify Your Account",
     text: `Your verification code is: ${code}. It will expire in 10 minutes.`,

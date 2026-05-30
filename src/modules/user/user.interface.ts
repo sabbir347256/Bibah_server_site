@@ -36,6 +36,7 @@ export type IUser = {
     mainWalletBalance: number;
     walletPoints: number;
     fullName: string;
+    religion: string;
     institute: string;
     education: string;
     fatherOccupation: string;

@@ -19,6 +19,7 @@ interface MulterRequest extends Request {
 const registerUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userData = { ...req.body };
+        console.log(userData)
         const file = (req as MulterRequest).file;
 
         if (userData.auths && typeof userData.auths === "string") {
@@ -32,6 +33,12 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
         if (file) {
             userData.profileImage = file.path || (file as any).location || file.filename;
         }
+
+
+        // if (file) {
+        //     const optimizedRelativePath = await optimizeImage(file.buffer, file.originalname);
+        //     userData.profileImage = optimizedRelativePath; 
+        // }
 
         const isExist = await User.findOne({ email: userData.email });
 
