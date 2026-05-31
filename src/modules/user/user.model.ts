@@ -71,7 +71,7 @@ const calculateAge = (birthDateString: string): number => {
     return age;
 };
 
-UserSchema.pre("save", async function () { // <--- এখান থেকে (next) বাদ দেওয়া হয়েছে
+UserSchema.pre("save", async function () {
     const user = this as any;
 
     if (user.birth) {
@@ -99,7 +99,6 @@ UserSchema.pre("save", async function () { // <--- এখান থেকে (ne
         if (lastUser && lastUser.userID) {
             const parts = lastUser.userID.split("-");
             if (parts.length === 2) {
-                // এখানে parts[1] || "0" দিয়ে প্রথম এররটি ফিক্স করা হয়েছে
                 currentSequence = parseInt(parts[1] || "0", 10);
             }
         }
@@ -124,9 +123,8 @@ UserSchema.pre("save", async function () { // <--- এখান থেকে (ne
 
         user.ownRefarelID = generatedReferral;
     }
-
-    // নিচে থাকা next(); লাইনটি পুরোপুরি মুছে ফেলা হয়েছে
 });
+
 
 
 export const User: Model<IUser> = mongoose.model<IUser>("User", UserSchema);

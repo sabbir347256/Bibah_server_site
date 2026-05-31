@@ -19,9 +19,7 @@ interface MulterRequest extends Request {
 const registerUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userData = { ...req.body };
-        console.log("Incoming Registration Data: ", userData);
-
-        const file = (req as any).file; // টাইপ সেফটি সহজ করা হলো
+        const file = (req as any).file;
 
         if (userData.auths && typeof userData.auths === "string") {
             try {
@@ -48,7 +46,7 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
         if (!userData.password) {
             throw new appError(StatusCodes.BAD_REQUEST, "Password is required!");
         }
-
+        
         const hashedPassword = await bcryptjs.hash(userData.password, 10);
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
         const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
@@ -73,7 +71,6 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
             });
         }
 
-        // ইমেইল পাঠানোর ট্রাই-ক্যাচ যাতে ইমেইল ফেইল করলে সার্ভার ক্র্যাশ না করে
         try {
             await sendVerificationEmail(userRecord.email, otpCode);
         } catch (emailError) {
