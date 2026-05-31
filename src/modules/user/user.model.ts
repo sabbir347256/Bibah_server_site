@@ -13,20 +13,20 @@ const UserSchema: Schema<IUser> = new Schema(
     {
         userID: { type: String, unique: true },
         ownRefarelID: { type: String, unique: true },
-        bonusRefarelID: { type: String, default: null,index: true },
+        bonusRefarelID: { type: String, default: null, index: true },
         bonusWalletPoints: { type: Number, default: 0 },
         agentReferWalletPoints: { type: Number, default: 0 },
         mainWalletBalance: { type: Number, default: 0 },
         walletPoints: { type: Number, default: 0 },
         fullName: { type: String, required: true, trim: true },
         religion: { type: String, required: true },
-        Height: { type: String, default : null },
-        maritalStatus: { type: String, default : null },
-        education: { type: String, default : null },
-        professionOrganization : {type : String, default : null},
-        institute : {type : String, default : null},
-        fatherOccupation : {type : String, default : null},
-        motherOccupation : {type : String, default : null},
+        Height: { type: String, default: null },
+        maritalStatus: { type: String, default: null },
+        education: { type: String, default: null },
+        professionOrganization: { type: String, default: null },
+        institute: { type: String, default: null },
+        fatherOccupation: { type: String, default: null },
+        motherOccupation: { type: String, default: null },
         email: { type: String, required: true, unique: true, lowercase: true, trim: true },
         birth: { type: String, required: true },
         age: { type: Number },
@@ -113,7 +113,7 @@ UserSchema.pre("save", async function () {
         let generatedReferral = "";
 
         while (!isUnique) {
-            generatedReferral = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+            generatedReferral = Math.floor(1000000 + Math.random() * 9000000).toString();
             const existingUser = await mongoose.model("User").findOne({ ownRefarelID: generatedReferral });
             if (!existingUser) {
                 isUnique = true;
