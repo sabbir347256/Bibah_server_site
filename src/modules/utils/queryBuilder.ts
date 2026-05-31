@@ -23,9 +23,9 @@ class QueryBuilder<T> {
       this.modelQuery = this.modelQuery.find({
         $or: searchableFields.map(
           (field) =>
-            ({
-              [field]: { $regex: searchTerm, $options: "i" },
-            } as TFilterQuery<T>)
+          ({
+            [field]: { $regex: searchTerm, $options: "i" },
+          } as TFilterQuery<T>)
         ),
       } as TFilterQuery<T>);
     }
@@ -40,10 +40,15 @@ class QueryBuilder<T> {
     excludeFields.forEach((el) => delete queryObj[el]);
 
     const cleanedQueryObj: Record<string, any> = {};
+
     Object.keys(queryObj).forEach((key) => {
       const value = queryObj[key];
       if (value !== undefined && value !== "" && value !== "undefined") {
-        cleanedQueryObj[key] = value;
+        if (typeof value === 'string' && value.includes(',')) {
+          cleanedQueryObj[key] = { $in: value.split(',') };
+        } else {
+          cleanedQueryObj[key] = value;
+        }
       }
     });
 
@@ -61,7 +66,7 @@ class QueryBuilder<T> {
 
   paginate() {
     const page = Math.max(1, Number(this.query?.page) || 1);
-    const limit = Math.max(1, Number(this.query?.limit) || 10);
+    const limit = Math.max(1, Number(this.query?.limit) || 8);
     const skip = (page - 1) * limit;
     this.modelQuery = this.modelQuery.skip(skip).limit(limit);
     return this;

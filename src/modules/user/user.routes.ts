@@ -18,5 +18,6 @@ router.post("/unlock", checkAuth(Role.USER), profileUnlockController.unlockProfi
 router.patch("/status/:id", userControllers.updateUserStatus);
 router.delete("/:id", userControllers.deleteUser);
 router.put("/update", userControllers.updateProfile);
+router.get("/search-profiles", userControllers.searchProfiles);
 
 export const userRoutes = router;   

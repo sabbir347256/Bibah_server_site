@@ -323,6 +323,59 @@ const updateProfile = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
+const searchProfiles = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const query = { ...req.query };
+    const cleanedQueryObj: Record<string, any> = {};
+
+    if (query.religion) {
+      cleanedQueryObj.religion = { $regex: query.religion, $options: "i" };
+    }
+    if (query.profession) {
+      cleanedQueryObj.profession = { $regex: query.profession, $options: "i" };
+    }
+    if (query.currentDistrict) {
+      cleanedQueryObj.currentDistrict = { $regex: query.currentDistrict, $options: "i" };
+    }
+    if (query.familyStatus) {
+      cleanedQueryObj.maritalStatus = { $regex: query.familyStatus, $options: "i" };
+    }
+    if (query.education) {
+      const eduArray = (query.education as string).split(",");
+      cleanedQueryObj.education = { $in: eduArray.map(edu => new RegExp(edu, "i")) };
+    }
+
+    const excludeFields = ["searchTerm", "sort", "limit", "page", "fields", "religion", "profession", "currentDistrict", "education", "familyStatus"];
+    excludeFields.forEach((el) => delete query[el]);
+
+    const combinedQuery = {
+      ...query,
+      ...cleanedQueryObj,
+      isDeleted: false,
+      isApproved: false
+    };
+
+    const searchableFields = ["fullName", "userID", "email", "profession"];
+
+    const userQueryBuilder = new QueryBuilder(User.find(combinedQuery), req.query)
+      .search(searchableFields)
+      .sort()
+      .paginate();
+
+    const result = await userQueryBuilder.modelQuery;
+    const meta = await userQueryBuilder.countTotal();
+
+    res.status(200).json({
+      success: true,
+      message: "Profiles retrieved successfully",
+      meta,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const userControllers = {
     registerUser,
     verifyEmail,
@@ -330,5 +383,6 @@ export const userControllers = {
     getAllUsers,
     updateUserStatus,
     deleteUser,
-    updateProfile
+    updateProfile,
+    searchProfiles
 };
