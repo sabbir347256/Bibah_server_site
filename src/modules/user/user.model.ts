@@ -71,7 +71,7 @@ const calculateAge = (birthDateString: string): number => {
     return age;
 };
 
-UserSchema.pre("save", async function () {
+UserSchema.pre("save", async function () { // <--- এখান থেকে (next) বাদ দেওয়া হয়েছে
     const user = this as any;
 
     if (user.birth) {
@@ -82,7 +82,6 @@ UserSchema.pre("save", async function () {
         if (typeof user.bonusRefarelID === "string") {
             user.bonusRefarelID = user.bonusRefarelID.trim();
         }
-        // যদি ফাকা স্ট্রিং হয়, তবে ডেটাবেজে null সেট করবে
         if (user.bonusRefarelID === "") {
             user.bonusRefarelID = null;
         }
@@ -90,15 +89,18 @@ UserSchema.pre("save", async function () {
         user.bonusRefarelID = null;
     }
 
+    const UserModel = this.constructor as Model<IUser>;
+
     if (!user.userID) {
-        const lastUser = await mongoose.model("User").findOne({}, {}, { sort: { createdAt: -1 } });
+        const lastUser = await UserModel.findOne({}, {}, { sort: { createdAt: -1 } });
 
         let currentSequence = 0;
 
         if (lastUser && lastUser.userID) {
             const parts = lastUser.userID.split("-");
             if (parts.length === 2) {
-                currentSequence = parseInt(parts[1], 10);
+                // এখানে parts[1] || "0" দিয়ে প্রথম এররটি ফিক্স করা হয়েছে
+                currentSequence = parseInt(parts[1] || "0", 10);
             }
         }
 
@@ -114,7 +116,7 @@ UserSchema.pre("save", async function () {
 
         while (!isUnique) {
             generatedReferral = Math.floor(1000000 + Math.random() * 9000000).toString();
-            const existingUser = await mongoose.model("User").findOne({ ownRefarelID: generatedReferral });
+            const existingUser = await UserModel.findOne({ ownRefarelID: generatedReferral });
             if (!existingUser) {
                 isUnique = true;
             }
@@ -122,6 +124,9 @@ UserSchema.pre("save", async function () {
 
         user.ownRefarelID = generatedReferral;
     }
+
+    // নিচে থাকা next(); লাইনটি পুরোপুরি মুছে ফেলা হয়েছে
 });
+
 
 export const User: Model<IUser> = mongoose.model<IUser>("User", UserSchema);

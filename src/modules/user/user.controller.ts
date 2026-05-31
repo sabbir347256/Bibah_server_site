@@ -19,8 +19,9 @@ interface MulterRequest extends Request {
 const registerUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userData = { ...req.body };
-        console.log(userData)
-        const file = (req as MulterRequest).file;
+        console.log("Incoming Registration Data: ", userData);
+
+        const file = (req as any).file; // টাইপ সেফটি সহজ করা হলো
 
         if (userData.auths && typeof userData.auths === "string") {
             try {
@@ -31,16 +32,14 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
         }
 
         if (file) {
-            userData.profileImage = file.path || (file as any).location || file.filename;
+            userData.profileImage = file.path || file.location || file.filename;
         }
 
+        if (!userData.email) {
+            throw new appError(StatusCodes.BAD_REQUEST, "Email is required!");
+        }
 
-        // if (file) {
-        //     const optimizedRelativePath = await optimizeImage(file.buffer, file.originalname);
-        //     userData.profileImage = optimizedRelativePath; 
-        // }
-
-        const isExist = await User.findOne({ email: userData.email });
+        const isExist = await User.findOne({ email: userData.email.toLowerCase().trim() });
 
         if (isExist && isExist.isVerified) {
             throw new appError(StatusCodes.BAD_REQUEST, "Email already registered and verified!");
@@ -49,8 +48,8 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
         if (!userData.password) {
             throw new appError(StatusCodes.BAD_REQUEST, "Password is required!");
         }
-        const hashedPassword = await bcryptjs.hash(userData.password, 10);
 
+        const hashedPassword = await bcryptjs.hash(userData.password, 10);
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
         const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -74,7 +73,14 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
             });
         }
 
-        await sendVerificationEmail(userRecord.email, otpCode);
+        // ইমেইল পাঠানোর ট্রাই-ক্যাচ যাতে ইমেইল ফেইল করলে সার্ভার ক্র্যাশ না করে
+        try {
+            await sendVerificationEmail(userRecord.email, otpCode);
+        } catch (emailError) {
+            console.error("Email sending failed: ", emailError);
+            throw new appError(StatusCodes.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again.");
+        }
+
         await userRecord.save();
 
         const result = userRecord.toObject();
@@ -324,56 +330,56 @@ const updateProfile = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 const searchProfiles = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const query = { ...req.query };
-    const cleanedQueryObj: Record<string, any> = {};
+    try {
+        const query = { ...req.query };
+        const cleanedQueryObj: Record<string, any> = {};
 
-    if (query.religion) {
-      cleanedQueryObj.religion = { $regex: query.religion, $options: "i" };
+        if (query.religion) {
+            cleanedQueryObj.religion = { $regex: query.religion, $options: "i" };
+        }
+        if (query.profession) {
+            cleanedQueryObj.profession = { $regex: query.profession, $options: "i" };
+        }
+        if (query.currentDistrict) {
+            cleanedQueryObj.currentDistrict = { $regex: query.currentDistrict, $options: "i" };
+        }
+        if (query.familyStatus) {
+            cleanedQueryObj.maritalStatus = { $regex: query.familyStatus, $options: "i" };
+        }
+        if (query.education) {
+            const eduArray = (query.education as string).split(",");
+            cleanedQueryObj.education = { $in: eduArray.map(edu => new RegExp(edu, "i")) };
+        }
+
+        const excludeFields = ["searchTerm", "sort", "limit", "page", "fields", "religion", "profession", "currentDistrict", "education", "familyStatus"];
+        excludeFields.forEach((el) => delete query[el]);
+
+        const combinedQuery = {
+            ...query,
+            ...cleanedQueryObj,
+            isDeleted: false,
+            isApproved: false
+        };
+
+        const searchableFields = ["fullName", "userID", "email", "profession"];
+
+        const userQueryBuilder = new QueryBuilder(User.find(combinedQuery), req.query)
+            .search(searchableFields)
+            .sort()
+            .paginate();
+
+        const result = await userQueryBuilder.modelQuery;
+        const meta = await userQueryBuilder.countTotal();
+
+        res.status(200).json({
+            success: true,
+            message: "Profiles retrieved successfully",
+            meta,
+            data: result,
+        });
+    } catch (error) {
+        next(error);
     }
-    if (query.profession) {
-      cleanedQueryObj.profession = { $regex: query.profession, $options: "i" };
-    }
-    if (query.currentDistrict) {
-      cleanedQueryObj.currentDistrict = { $regex: query.currentDistrict, $options: "i" };
-    }
-    if (query.familyStatus) {
-      cleanedQueryObj.maritalStatus = { $regex: query.familyStatus, $options: "i" };
-    }
-    if (query.education) {
-      const eduArray = (query.education as string).split(",");
-      cleanedQueryObj.education = { $in: eduArray.map(edu => new RegExp(edu, "i")) };
-    }
-
-    const excludeFields = ["searchTerm", "sort", "limit", "page", "fields", "religion", "profession", "currentDistrict", "education", "familyStatus"];
-    excludeFields.forEach((el) => delete query[el]);
-
-    const combinedQuery = {
-      ...query,
-      ...cleanedQueryObj,
-      isDeleted: false,
-      isApproved: false
-    };
-
-    const searchableFields = ["fullName", "userID", "email", "profession"];
-
-    const userQueryBuilder = new QueryBuilder(User.find(combinedQuery), req.query)
-      .search(searchableFields)
-      .sort()
-      .paginate();
-
-    const result = await userQueryBuilder.modelQuery;
-    const meta = await userQueryBuilder.countTotal();
-
-    res.status(200).json({
-      success: true,
-      message: "Profiles retrieved successfully",
-      meta,
-      data: result,
-    });
-  } catch (error) {
-    next(error);
-  }
 };
 
 export const userControllers = {
