@@ -114,7 +114,12 @@ UserSchema.pre("save", async function () {
         let generatedReferral = "";
 
         while (!isUnique) {
-            generatedReferral = Math.floor(1000000 + Math.random() * 9000000).toString();
+            if (user.role === "AGENT") {
+                generatedReferral = Math.floor(1000 + Math.random() * 9000).toString();
+            } else {
+                generatedReferral = Math.floor(1000000 + Math.random() * 9000000).toString();
+            }
+
             const existingUser = await UserModel.findOne({ ownRefarelID: generatedReferral });
             if (!existingUser) {
                 isUnique = true;

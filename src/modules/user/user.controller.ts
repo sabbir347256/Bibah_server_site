@@ -16,6 +16,7 @@ interface MulterRequest extends Request {
     file?: Express.Multer.File;
 }
 
+
 const registerUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userData = { ...req.body };
@@ -46,19 +47,25 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
         if (!userData.password) {
             throw new appError(StatusCodes.BAD_REQUEST, "Password is required!");
         }
-        
+
         const hashedPassword = await bcryptjs.hash(userData.password, 10);
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
+        const isAgent = userData.role === "AGENT";
+
+        const otpCode = isAgent ? null : Math.floor(100000 + Math.random() * 900000).toString();
+        const expiryTime = isAgent ? null : new Date(Date.now() + 10 * 60 * 1000);
 
         let userRecord;
+
+        const dynamicStatus = isAgent
+            ? { isVerified: true, isApproved: true, isActive: "ACTIVE" }
+            : { isVerified: false, isApproved: false, isActive: "INACTIVE" };
 
         if (isExist) {
             Object.assign(isExist, userData, {
                 password: hashedPassword,
                 verificationCode: otpCode,
                 verificationExpiry: expiryTime,
-                isVerified: false,
+                ...dynamicStatus
             });
             userRecord = isExist;
         } else {
@@ -67,15 +74,17 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
                 password: hashedPassword,
                 verificationCode: otpCode,
                 verificationExpiry: expiryTime,
-                isVerified: false,
+                ...dynamicStatus
             });
         }
 
-        try {
-            await sendVerificationEmail(userRecord.email, otpCode);
-        } catch (emailError) {
-            console.error("Email sending failed: ", emailError);
-            throw new appError(StatusCodes.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again.");
+        if (!isAgent) {
+            try {
+                await sendVerificationEmail(userRecord.email, otpCode!);
+            } catch (emailError) {
+                console.error("Email sending failed: ", emailError);
+                throw new appError(StatusCodes.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again.");
+            }
         }
 
         await userRecord.save();
@@ -87,13 +96,94 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
         return utils.sendResponse(res, {
             statusCode: StatusCodes.CREATED,
             success: true,
-            message: "Registration initial stage successful. Verification code sent to your email.",
+            message: isAgent
+                ? "Agent registered successfully, account is now active and approved."
+                : "Registration initial stage successful. Verification code sent to your email.",
             data: result,
         });
     } catch (error) {
         next(error);
     }
 };
+
+// const registerUser = async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//         const userData = { ...req.body };
+//         const file = (req as any).file;
+
+//         if (userData.auths && typeof userData.auths === "string") {
+//             try {
+//                 userData.auths = JSON.parse(userData.auths);
+//             } catch (e) {
+//                 console.error("Auths parsing error, keeping original");
+//             }
+//         }
+
+//         if (file) {
+//             userData.profileImage = file.path || file.location || file.filename;
+//         }
+
+//         if (!userData.email) {
+//             throw new appError(StatusCodes.BAD_REQUEST, "Email is required!");
+//         }
+
+//         const isExist = await User.findOne({ email: userData.email.toLowerCase().trim() });
+
+//         if (isExist && isExist.isVerified) {
+//             throw new appError(StatusCodes.BAD_REQUEST, "Email already registered and verified!");
+//         }
+
+//         if (!userData.password) {
+//             throw new appError(StatusCodes.BAD_REQUEST, "Password is required!");
+//         }
+
+//         const hashedPassword = await bcryptjs.hash(userData.password, 10);
+//         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+//         const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
+
+//         let userRecord;
+
+//         if (isExist) {
+//             Object.assign(isExist, userData, {
+//                 password: hashedPassword,
+//                 verificationCode: otpCode,
+//                 verificationExpiry: expiryTime,
+//                 isVerified: false,
+//             });
+//             userRecord = isExist;
+//         } else {
+//             userRecord = new User({
+//                 ...userData,
+//                 password: hashedPassword,
+//                 verificationCode: otpCode,
+//                 verificationExpiry: expiryTime,
+//                 isVerified: false,
+//             });
+//         }
+
+//         try {
+//             await sendVerificationEmail(userRecord.email, otpCode);
+//         } catch (emailError) {
+//             console.error("Email sending failed: ", emailError);
+//             throw new appError(StatusCodes.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again.");
+//         }
+
+//         await userRecord.save();
+
+//         const result = userRecord.toObject();
+//         delete (result as any).password;
+//         delete (result as any).verificationCode;
+
+//         return utils.sendResponse(res, {
+//             statusCode: StatusCodes.CREATED,
+//             success: true,
+//             message: "Registration initial stage successful. Verification code sent to your email.",
+//             data: result,
+//         });
+//     } catch (error) {
+//         next(error);
+//     }
+// };
 
 const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -194,7 +284,8 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
 
         let queryCondition: any = {
             isDeleted: false,
-            email: { $ne: "superadmin@gmail.com" }
+            email: { $ne: "superadmin@gmail.com" },
+            role: { $nin: ["AGENT", "ADMIN"] }
         };
 
         const authHeader = req.headers.authorization;
@@ -211,7 +302,7 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
             }
         }
 
-        const userQuery = new QueryBuilder(User.find(queryCondition), req.query)
+        const userQuery = new QueryBuilder(User.find(queryCondition).select("-password"), req.query)
             .search(searchableFields)
             .filter()
             .sort()
@@ -234,6 +325,51 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
+const getAllAgent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const searchableFields = ["fullName", "email", "contactNo", "profession"];
+
+        let queryCondition: any = {
+            isDeleted: false,
+            role: "AGENT"
+        };
+
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+            const token = authHeader.split(" ")[1];
+            try {
+                const decoded = jwt.verify(token as string, process.env.JWT_ACCESS_SECRET as string) as any;
+                const currentUserId = decoded?.userId || decoded?.id;
+
+                if (currentUserId) {
+                    queryCondition._id = { $ne: currentUserId };
+                }
+            } catch (tokenError) {
+            }
+        }
+
+        const userQuery = new QueryBuilder(User.find(queryCondition).select("-password"), req.query)
+            .search(searchableFields)
+            .filter()
+            .sort()
+            .paginate()
+            .fields();
+
+        const result = await userQuery.modelQuery;
+        const meta = await userQuery.countTotal();
+
+        return utils.sendResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            meta,
+            message: "Users fetched successfully",
+            data: result,
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
 const updateUserStatus = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -354,8 +490,9 @@ const searchProfiles = async (req: Request, res: Response, next: NextFunction) =
         const combinedQuery = {
             ...query,
             ...cleanedQueryObj,
-            isDeleted: false,
-            isApproved: false
+            role: { $nin: ["AGENT", "ADMIN"] },
+            // isDeleted: false,
+            // isApproved: false
         };
 
         const searchableFields = ["fullName", "userID", "email", "profession"];
@@ -387,5 +524,6 @@ export const userControllers = {
     updateUserStatus,
     deleteUser,
     updateProfile,
-    searchProfiles
+    searchProfiles,
+    getAllAgent
 };
