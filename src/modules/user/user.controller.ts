@@ -10,6 +10,7 @@ import { JwtPayload } from "jsonwebtoken";
 import QueryBuilder from "../utils/queryBuilder";
 import jwt from "jsonwebtoken";
 import { authenticate } from "passport";
+import { deleteOldCloudinaryImage } from "../../config/imagefunciton";
 
 
 interface MulterRequest extends Request {
@@ -20,7 +21,22 @@ interface MulterRequest extends Request {
 const registerUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userData = { ...req.body };
+        console.log(userData)
         const file = (req as any).file;
+
+        if (userData?.bonusRefarelID) {
+            const referrer = await User.findOne({ ownRefarelID: userData.bonusRefarelID });
+
+            if (referrer) {
+                if (referrer.role === "AGENT") {
+                    referrer.agentReferWalletPoints = (referrer.agentReferWalletPoints || 0) + 70;
+                } else if (referrer.role === "USER") {
+                    referrer.bonusWalletPoints = (referrer.bonusWalletPoints || 0) + 100;
+                }
+
+                await referrer.save();
+            }
+        }
 
         if (userData.auths && typeof userData.auths === "string") {
             try {
@@ -419,6 +435,59 @@ const deleteUser = async (req: Request, res: Response) => {
     }
 };
 
+const updateProfileImage = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { type } = req.params;
+        const userIdentifier = (req as any).user?.email;
+
+        if (!userIdentifier) {
+            throw new appError(StatusCodes.UNAUTHORIZED, "Authentication token missing or invalid.");
+        }
+
+        if (type !== "avatar" && type !== "cover") {
+            throw new appError(StatusCodes.BAD_REQUEST, "Invalid image update type scope.");
+        }
+
+        if (!req.file) {
+            throw new appError(StatusCodes.BAD_REQUEST, "No image file provided for upload.");
+        }
+
+        const user = await User.findOne({ email: userIdentifier });
+        if (!user) {
+            throw new appError(StatusCodes.NOT_FOUND, "User profile record not found.");
+        }
+
+        const newImageUrl = req.file.path;
+
+
+        if (type === "avatar") {
+            if ((user as any).profileImage) {
+                await deleteOldCloudinaryImage((user as any).profileImage);
+            }
+            (user as any).profileImage = newImageUrl;
+        } else if (type === "cover") {
+            if ((user as any).coverImage) {
+                await deleteOldCloudinaryImage((user as any).coverImage);
+            }
+            (user as any).coverImage = newImageUrl;
+        }
+
+        await user.save();
+
+        const result = user.toObject();
+        delete (result as any).password;
+
+        return utils.sendResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: `${type === "cover" ? "Cover" : "Avatar"} photo updated successfully.`,
+            data: result,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const updateData = { ...req.body };
@@ -431,6 +500,8 @@ const updateProfile = async (req: Request, res: Response, next: NextFunction) =>
         delete updateData.agentReferWalletPoints;
         delete updateData.ownRefarelID;
         delete updateData.userID;
+        delete updateData.avatarPhoto;
+        delete updateData.coverPhoto;
 
         const userIdentifier = (req as any).user?.email || updateData.email;
 
@@ -445,7 +516,6 @@ const updateProfile = async (req: Request, res: Response, next: NextFunction) =>
         }
 
         Object.assign(user, updateData);
-
         await user.save();
 
         const result = user.toObject();
@@ -487,7 +557,7 @@ const searchProfiles = async (req: Request, res: Response, next: NextFunction) =
         const excludeFields = ["searchTerm", "sort", "limit", "page", "fields", "religion", "profession", "currentDistrict", "education", "familyStatus"];
         excludeFields.forEach((el) => delete query[el]);
 
-        const combinedQuery = {
+        const combinedQuery: Record<string, any> = {
             ...query,
             ...cleanedQueryObj,
             role: { $nin: ["AGENT", "ADMIN"] },
@@ -525,5 +595,6 @@ export const userControllers = {
     deleteUser,
     updateProfile,
     searchProfiles,
-    getAllAgent
+    getAllAgent,
+    updateProfileImage
 };
