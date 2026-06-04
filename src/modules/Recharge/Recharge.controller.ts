@@ -37,7 +37,7 @@ const createTransaction = async (req: Request, res: Response) => {
 
 const getAllTransactions = async (req: Request, res: Response) => {
     try {
-        const result = await Transaction.find().populate("userObjectId");
+        const result = await Transaction.find().populate("userObjectId").sort({ createdAt: -1 });
         return utils.sendResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,

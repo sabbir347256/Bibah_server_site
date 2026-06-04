@@ -460,6 +460,7 @@ const updateProfileImage = async (req: Request, res: Response, next: NextFunctio
         const newImageUrl = req.file.path;
 
 
+        
         if (type === "avatar") {
             if ((user as any).profileImage) {
                 await deleteOldCloudinaryImage((user as any).profileImage);
