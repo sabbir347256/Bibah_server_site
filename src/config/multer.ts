@@ -7,6 +7,11 @@ const storage = new CloudinaryStorage({
   params: {
     folder: "properties",
     allowed_formats: ["jpg", "png", "jpeg", "webp"],
+    transformation: [
+      { quality: "auto:good" },
+      { fetch_format: "auto" },  
+      { width: 1000, crop: "limit" } 
+    ],
   } as any,
 });
 

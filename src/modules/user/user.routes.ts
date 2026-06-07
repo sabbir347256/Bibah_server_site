@@ -18,9 +18,9 @@ router.get("/details/:id", profileUnlockController.getProfileDetails);
 router.post("/unlock", checkAuth(Role.USER), profileUnlockController.unlockProfile);
 router.patch("/status/:id", checkAuth(Role.USER), userControllers.updateUserStatus);
 router.delete("/:id", checkAuth(Role.USER), userControllers.deleteUser);
-router.put("/update", checkAuth(Role.USER), userControllers.updateProfile);
+router.put("/update", checkAuth(Role.USER, Role.AGENT, Role.ADMIN), userControllers.updateProfile);
 router.get("/search-profiles", userControllers.searchProfiles);
-router.put("/update-image/:type", checkAuth(Role.USER), upload.single("image"), userControllers.updateProfileImage);
+router.put("/update-image/:type", checkAuth(Role.USER, Role.AGENT, Role.ADMIN), upload.single("image"), userControllers.updateProfileImage);
 router.put("/update-image/cover", checkAuth(Role.USER), upload.single("image"), (req, res, next) => { req.params.type = "cover"; next(); }, userControllers.updateProfileImage);
 
 export const userRoutes = router;   

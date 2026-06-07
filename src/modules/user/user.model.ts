@@ -47,6 +47,8 @@ const UserSchema: Schema<IUser> = new Schema(
         profileImage: { type: String, default: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png" },
         coverImage: { type: String, default: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png" },
         isVerified: { type: Boolean, default: false },
+        isFieldVerification: { type: Boolean, default: false },
+        isDocumentVerification: { type: Boolean, default: false },
         verificationStage: { type: String, default: null },
         verificationCode: { type: String, default: null },
         verificationExpiry: { type: Date, default: null },

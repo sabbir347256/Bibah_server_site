@@ -53,6 +53,8 @@ export type IUser = {
     profileImage?: string;
     coverImage?: string;
     isVerified: boolean;
+    isFieldVerification: boolean;
+    isDocumentVerification: boolean;
     verificationStage: string;
     verificationCode?: string;
     verificationExpiry?: Date;
