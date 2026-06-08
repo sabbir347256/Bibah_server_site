@@ -11,4 +11,5 @@ export type ITransaction = {
     status: "PENDING" | "APPROVED" | "REJECTED";
     createdAt: Date;
     updatedAt: Date;
+    originUrl : string
 };

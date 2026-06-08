@@ -7,9 +7,14 @@ const TransactionSchema = new Schema<ITransaction>(
         userId: { type: String, required: true },
         transactionId: { type: String, required: true, unique: true, trim: true },
         phoneNumber: { type: String, required: true, trim: true },
-        amount: { type: Number, required : true ,default: 0 },
-        isDeleted : {type : Boolean, default : false},
+        amount: { type: Number, required: true, default: 0 },
+        isDeleted: { type: Boolean, default: false },
         status: { type: String, enum: ["PENDING", "APPROVED", "REJECTED"], default: "PENDING" },
+        originUrl: {
+            type: String,
+            required: true,
+            default: 'https://bibah.app'
+        }
     },
     { timestamps: true, versionKey: false }
 );

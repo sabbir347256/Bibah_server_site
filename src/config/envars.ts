@@ -17,6 +17,9 @@ const envVars = {
   MAIL_PORT: process.env.MAIL_PORT as string,
   MAIL_USER: process.env.MAIL_USER as string,
   MAIL_PASS: process.env.MAIL_PASS as string,
+  BACKEND_URL: process.env.BACKEND_URL as string,
+  PAYSTATION_MERCHANT_ID: process.env.PAYSTATION_MERCHANT_ID as string,
+  PAYSTATION_PASSWORD: process.env.PAYSTATION_PASSWORD as string,
 };
 
 export = envVars;
