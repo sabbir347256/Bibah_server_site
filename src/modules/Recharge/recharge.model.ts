@@ -6,6 +6,7 @@ const TransactionSchema = new Schema<ITransaction>(
         userObjectId: { type: Schema.Types.ObjectId, ref: "User", required: true },
         userId: { type: String, required: true },
         transactionId: { type: String, required: true, unique: true, trim: true },
+        gatewayTransactionId: { type: String },
         phoneNumber: { type: String, required: true, trim: true },
         amount: { type: Number, required: true, default: 0 },
         isDeleted: { type: Boolean, default: false },

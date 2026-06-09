@@ -8,9 +8,7 @@ import mongoose from "mongoose";
 
 const uploadNid = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log(req.user)
         const userId = (req as any).user.userId;
-        console.log(userId)
         const files = (req as any).files as any[];
 
         if (!files || files.length === 0) {
@@ -92,7 +90,7 @@ const checkNidSubmission = async (req: Request, res: Response, next: NextFunctio
 
 const getAllNidSubmissions = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const submissions = await NidDocument.find().populate("userId", "name email contactNo");
+        const submissions = await NidDocument.find().populate("userId", "fullName email contactNo userID");
         return res.status(200).json({
             success: true,
             data: submissions,
@@ -103,6 +101,9 @@ const getAllNidSubmissions = async (req: Request, res: Response, next: NextFunct
 };
 
 const updateNidStatus = async (req: Request, res: Response, next: NextFunction) => {
+    console.log('adf')
+    console.log(req.body)
+    console.log(req.params)
     try {
         const { id } = req.params;
         const { status } = req.body;

@@ -26,7 +26,8 @@ app.use(
       "https://www.api.bibah.app",
       "http://localhost:5174",
       "http://localhost:5000",
-      "https://bdapis.vercel.app/geo/v2.0"
+      "https://bdapis.vercel.app/geo/v2.0",
+      "https://sandbox.paystation.com.bd/initiate-payment",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

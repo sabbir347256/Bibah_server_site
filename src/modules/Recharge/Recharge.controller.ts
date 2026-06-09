@@ -11,7 +11,6 @@ import envVars from "../../config/envars";
 const initiatePayStationPayment = async (req: Request, res: Response) => {
     try {
         const { userObjectId, userId, amount, name, email, phone, originUrl } = req.body;
-        console.log(originUrl)
 
         if (!amount || amount <= 0) {
             return res.status(400).json({ success: false, message: "Invalid amount" });
@@ -41,14 +40,20 @@ const initiatePayStationPayment = async (req: Request, res: Response) => {
         formData.append('cust_phone', phone || "01700000000");
         formData.append('cust_email', email || "user@gmail.com");
         formData.append('cust_address', "Dhaka, Bangladesh");
+        formData.append('checkout_items', 'Wallet Recharge');
 
         formData.append('opt_a', originUrl);
 
         formData.append('callback_url', `${envVars.BACKEND_URL}/api/v1/transaction/paystation-callback`);
 
-        const response = await axios.post('https://api.paystation.com.bd/initiate-payment', formData, {
+        // const response = await axios.post('https://api.paystation.com.bd/initiate-payment', formData, {
+        //     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        // });
+
+        const response = await axios.post('https://sandbox.paystation.com.bd/initiate-payment', formData, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
+        console.log(response.data)
 
         if (response.data.status_code === "200" && response.data.status === "success") {
             return res.status(200).json({
@@ -114,27 +119,34 @@ const initiatePayStationPayment = async (req: Request, res: Response) => {
 
 
 const paystationCallback = async (req: Request, res: Response) => {
+   
     try {
-        const { status, invoice_number, trx_id } = req.query; // opt_a আর লাগছে না
+        const { status, invoice_number, trx_id } = req.method === 'POST' ? req.body : req.query;
+        console.log("PayStation Callback HIT! Data:", req.method === 'POST' ? req.body : req.query);
+        const paymentStatus = String(status).toLowerCase();
+
+        if (!invoice_number) {
+            return res.status(400).send(
+                getRedirectHTML('https://bibah.app/payment-fail', "Invalid Request Parameter", "Error", true)
+            );
+        }
 
         const transaction = await Transaction.findOne({ transactionId: invoice_number as string });
-
         let targetFrontendUrl = 'https://bibah.app';
 
         if (!transaction) {
             return res.status(404).send(
-                getRedirectHTML(`${targetFrontendUrl}/payment-fail?message=TransactionNotFound`, "Transaction Not Found", "Canceled")
+                getRedirectHTML(`${targetFrontendUrl}/payment-fail?message=TransactionNotFound`, "Transaction Not Found", "Canceled", true)
             );
         }
 
         targetFrontendUrl = transaction.originUrl || 'https://bibah.app';
-        console.log("Fetched Origin URL from DB:", targetFrontendUrl);
 
-        if (status === 'Successful') {
-            if (transaction.status === "APPROVED") {
-                return res.redirect(`${targetFrontendUrl}/payment-success`);
-            }
+        if (transaction.status === "APPROVED") {
+            return res.redirect(`${targetFrontendUrl}/payment-success?invoice=${invoice_number}&trx=${transaction.gatewayTransactionId || trx_id}`);
+        }
 
+        if (paymentStatus === 'successful' || paymentStatus === 'success') {
             const amountToAdd = transaction.amount || 0;
 
             await User.findByIdAndUpdate(transaction.userObjectId, {
@@ -145,32 +157,35 @@ const paystationCallback = async (req: Request, res: Response) => {
                 }
             });
 
-            transaction.transactionId = trx_id as string;
+            transaction.gatewayTransactionId = trx_id as string;
             transaction.status = "APPROVED";
             await transaction.save();
 
             return res.redirect(`${targetFrontendUrl}/payment-success?invoice=${invoice_number}&trx=${trx_id}`);
-            
         } else {
             transaction.status = "REJECTED";
             await transaction.save();
-            
-            const redirectUrl = `${targetFrontendUrl}`;
-            
-            return res.status(200).send(
-                getRedirectHTML(redirectUrl, "You canceled the payment session or it failed.", "Payment Canceled")
-            );
-        }
 
+            return res.redirect(`${targetFrontendUrl}/payment-fail?message=GatewayDeclined`)
+
+            // return res.status(200).send(
+            //     getRedirectHTML(`${targetFrontendUrl}/payment-fail`, "You canceled the payment session or it failed.", "Payment Canceled", true)
+            // );
+        }
     } catch (error: any) {
-        console.error("Callback Error: ", error);
+        console.error(error);
         return res.status(500).send(
-            getRedirectHTML('https://bibah.app/payment-fail?message=ServerError', "Internal Server Error occurred.", "Error")
+            getRedirectHTML('https://bibah.app/payment-fail?message=ServerError', "Internal Server Error occurred.", "Error", true)
         );
     }
 };
 
-const getRedirectHTML = (url: string, message: string, statusText: string) => {
+const getRedirectHTML = (url: string, message: string, statusText: string, isError: boolean = true) => {
+    const themeColor = isError ? "red" : "green";
+    const icon = isError
+        ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
+
     return `
     <!DOCTYPE html>
     <html lang="en">
@@ -183,23 +198,20 @@ const getRedirectHTML = (url: string, message: string, statusText: string) => {
     </head>
     <body class="bg-gray-50 flex flex-col items-center justify-center min-h-screen font-sans">
         <div class="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-gray-100">
-            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+            <div class="w-16 h-16 bg-${themeColor}-100 text-${themeColor}-600 rounded-full flex items-center justify-center mx-auto mb-4 ${isError ? 'animate-bounce' : ''}">
+                ${icon}
             </div>
             <h2 class="text-xl font-bold text-gray-800 mb-2">${statusText}!</h2>
             <p class="text-sm text-gray-500 mb-6">${message}</p>
             <div class="space-y-3">
                 <div class="flex justify-center items-center gap-2 text-xs text-gray-400">
-                    <span>Redirecting back to website in <span id="countdown" class="font-bold text-red-600">5</span> seconds...</span>
+                    <span>Redirecting back to website in <span id="countdown" class="font-bold text-${themeColor}-600">5</span> seconds...</span>
                 </div>
-                <a href="${url}" class="block w-full bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2.5 px-4 rounded-xl transition duration-200">
+                <a href="${url}" class="block w-full bg-${themeColor}-600 hover:bg-${themeColor}-700 text-white text-sm font-semibold py-2.5 px-4 rounded-xl transition duration-200">
                     Go Back Immediately
                 </a>
             </div>
         </div>
-
         <script>
             let count = 5;
             const counterElement = document.getElementById('countdown');

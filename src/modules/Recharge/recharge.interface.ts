@@ -5,6 +5,7 @@ export type ITransaction = {
     userObjectId: Types.ObjectId;
     userId: string;
     transactionId: string;
+    gatewayTransactionId?: string;
     phoneNumber: string;
     amount: number;
     isDeleted : boolean;
