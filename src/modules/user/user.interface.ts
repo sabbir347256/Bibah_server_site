@@ -34,6 +34,7 @@ export type IUser = {
     bonusWalletPoints: number;
     agentReferWalletPoints: number;
     mainWalletBalance: number;
+    totalAmount : number;
     walletPoints: number;
     fullName: string;
     religion: string;

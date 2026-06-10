@@ -34,7 +34,7 @@ const createFieldVerify = async (req: Request, res: Response) => {
         const newRecord = new FieldVerify({ userId, agentId, amount });
         await newRecord.save();
 
-        agent.mainWalletBalance = (agent.mainWalletBalance || 0) + Number(amount);
+        agent.totalAmount = (agent.totalAmount || 0) + Number(amount);
         await agent.save();
 
         return utils.sendResponse(res, {

@@ -17,6 +17,7 @@ const UserSchema: Schema<IUser> = new Schema(
         bonusWalletPoints: { type: Number, default: 0 },
         agentReferWalletPoints: { type: Number, default: 0 },
         mainWalletBalance: { type: Number, default: 0 },
+        totalAmount: { type: Number, default: 0 },
         walletPoints: { type: Number, default: 0 },
         fullName: { type: String, required: true, trim: true },
         religion: { type: String, required: true },
@@ -78,6 +79,12 @@ UserSchema.pre("save", async function () {
 
     if (user.birth) {
         user.age = calculateAge(user.birth);
+    }
+
+    if (user.role === "AGENT") {
+        user.totalAmount = (user.agentReferWalletPoints || 0) + (user.mainWalletBalance || 0);
+    } else {
+        user.totalAmount = user.mainWalletBalance || 0;
     }
 
     if (user.bonusRefarelID) {

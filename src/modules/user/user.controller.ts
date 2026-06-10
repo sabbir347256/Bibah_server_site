@@ -29,7 +29,7 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
 
             if (referrer) {
                 if (referrer.role === "AGENT") {
-                    referrer.agentReferWalletPoints = (referrer.agentReferWalletPoints || 0) + 70;
+                    referrer.totalAmount = (referrer.totalAmount || 0) + 70;
                 } else if (referrer.role === "USER") {
                     referrer.bonusWalletPoints = (referrer.bonusWalletPoints || 0) + 100;
                 }

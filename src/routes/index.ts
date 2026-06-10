@@ -4,6 +4,7 @@ import { AuthRouter } from "../modules/auth/auth.routes";
 import { transactionRoutes } from "../modules/Recharge/recharge.routes";
 import { fieldVerifyRoute } from "../modules/filedverification/fieldverify.routes";
 import { documentVerification } from "../modules/documentVerification/document.routes";
+import { withdrawRoutes } from "../modules/withdraw/withdraw.routes";
 
 export const router = Router();
 
@@ -27,6 +28,10 @@ const moduleRoutes = [
   {
     path: "/verification",
     router: documentVerification,
+  },
+  {
+    path: "/withdraw",
+    router: withdrawRoutes,
   }
 
 ];
