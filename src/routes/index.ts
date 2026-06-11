@@ -5,6 +5,8 @@ import { transactionRoutes } from "../modules/Recharge/recharge.routes";
 import { fieldVerifyRoute } from "../modules/filedverification/fieldverify.routes";
 import { documentVerification } from "../modules/documentVerification/document.routes";
 import { withdrawRoutes } from "../modules/withdraw/withdraw.routes";
+import { nidTransactionRoutes } from "../modules/nidTransaction/nidtransaction.routes";
+import { fieldTransactionRoutes } from "../modules/fieldtransaction/fieldtransaction.routes";
 
 export const router = Router();
 
@@ -32,6 +34,14 @@ const moduleRoutes = [
   {
     path: "/withdraw",
     router: withdrawRoutes,
+  },
+  {
+    path: "/nidtransaction",
+    router: nidTransactionRoutes,
+  },
+  {
+    path: "/fieldTransaction",
+    router: fieldTransactionRoutes,
   }
 
 ];

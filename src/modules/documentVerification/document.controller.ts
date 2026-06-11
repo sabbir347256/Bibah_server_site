@@ -101,9 +101,6 @@ const getAllNidSubmissions = async (req: Request, res: Response, next: NextFunct
 };
 
 const updateNidStatus = async (req: Request, res: Response, next: NextFunction) => {
-    console.log('adf')
-    console.log(req.body)
-    console.log(req.params)
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -125,6 +122,17 @@ const updateNidStatus = async (req: Request, res: Response, next: NextFunction) 
             return res.status(404).json({
                 success: false,
                 message: "NID document not found",
+            });
+        }
+
+        if (status === "verified") {
+            await User.findByIdAndUpdate(updatedDoc.userId, {
+                $set: { isDocumentVerification: true }
+            });
+        }
+        else if (status === "rejected") {
+            await User.findByIdAndUpdate(updatedDoc.userId, {
+                $set: { isDocumentVerification: false }
             });
         }
 

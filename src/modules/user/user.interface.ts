@@ -55,6 +55,8 @@ export type IUser = {
     coverImage?: string;
     isVerified: boolean;
     isFieldVerification: boolean;
+    isNidPaid: boolean;
+    isFieldPaid: boolean;
     isDocumentVerification: boolean;
     verificationStage: string;
     verificationCode?: string;
