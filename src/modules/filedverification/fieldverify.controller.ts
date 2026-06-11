@@ -34,8 +34,10 @@ const createFieldVerify = async (req: Request, res: Response) => {
         const newRecord = new FieldVerify({ userId, agentId, amount });
         await newRecord.save();
 
-        agent.totalAmount = (agent.totalAmount || 0) + Number(amount);
-        await agent.save();
+        await User.updateOne(
+            { userID: agentId },
+            { $inc: { totalAmount: Number(amount) } }
+        );
 
         return utils.sendResponse(res, {
             statusCode: StatusCodes.OK,

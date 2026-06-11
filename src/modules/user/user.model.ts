@@ -81,11 +81,11 @@ UserSchema.pre("save", async function () {
         user.age = calculateAge(user.birth);
     }
 
-    if (user.role === "AGENT") {
-        user.totalAmount = (user.agentReferWalletPoints || 0) + (user.mainWalletBalance || 0);
-    } else {
-        user.totalAmount = user.mainWalletBalance || 0;
-    }
+    // if (user.role === "AGENT") {
+    //     user.totalAmount = (user.agentReferWalletPoints || 0) + (user.mainWalletBalance || 0);
+    // } else {
+    //     user.totalAmount = user.mainWalletBalance || 0;
+    // }
 
     if (user.bonusRefarelID) {
         if (typeof user.bonusRefarelID === "string") {
