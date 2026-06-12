@@ -3,6 +3,10 @@ import axios from "axios";
 import { NidTransaction } from "./nidtransaction.model";
 import envVars from "../../config/envars";
 import { User } from "../user/user.model";
+import { utils } from "../utils/utils";
+import { StatusCodes } from "http-status-codes";
+import QueryBuilder from "../utils/queryBuilder";
+
 
 const initiatePayment = async (req: Request, res: Response) => {
     try {
@@ -122,8 +126,74 @@ const updateStatus = async (req: Request, res: Response) => {
     }
 };
 
+
+const getAllNidTransactions = async (req: Request, res: Response) => {
+    try {
+        const searchableFields = ["userId", "transactionId", "phoneNumber"];
+
+        const nidTransactionQuery = new QueryBuilder(
+            NidTransaction.find({ isDeleted: { $ne: true }, status: "APPROVED" }).populate("userObjectId", "fullName email userID"),
+            req.query
+        )
+            .search(searchableFields)
+            .filter()
+            .sort()
+            .paginate()
+            .fields();
+
+        const result = await nidTransactionQuery.modelQuery;
+        const meta = await nidTransactionQuery.countTotal();
+
+        utils.sendResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: "Approved NID transactions retrieved successfully",
+            meta,
+            data: result,
+        });
+    } catch (error: any) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+const deleteNidTransaction = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const transaction = await NidTransaction.findByIdAndUpdate(
+            id,
+            { isDeleted: true },
+            { new: true }
+        );
+
+        if (!transaction) {
+            return res.status(StatusCodes.NOT_FOUND).json({
+                success: false,
+                message: "Transaction not found",
+            });
+        }
+
+        utils.sendResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: "NID transaction deleted successfully",
+            data: transaction,
+        });
+    } catch (error: any) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
 export const nidTransactionControllers = {
     initiatePayment,
     callback,
-    updateStatus
+    updateStatus,
+    getAllNidTransactions,
+    deleteNidTransaction
 };

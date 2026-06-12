@@ -8,6 +8,8 @@ const router = Router();
 router.post("/initiate", checkAuth(Role.USER), nidTransactionControllers.initiatePayment);
 router.post("/callback", nidTransactionControllers.callback);
 router.get("/callback", nidTransactionControllers.callback);
-router.patch("/update-status/:id",checkAuth(Role.AGENT), nidTransactionControllers.updateStatus);
+router.patch("/update-status/:id", checkAuth(Role.AGENT), nidTransactionControllers.updateStatus);
+router.get("/get-all",checkAuth(Role.ADMIN), nidTransactionControllers.getAllNidTransactions);
+router.delete("/delete/:id",checkAuth(Role.ADMIN), nidTransactionControllers.deleteNidTransaction);
 
 export const nidTransactionRoutes = router; 
