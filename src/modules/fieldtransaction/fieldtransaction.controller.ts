@@ -3,6 +3,10 @@ import { FieldTransaction } from "./fieldtransaction.model";
 import envVars from "../../config/envars";
 import axios from "axios";
 import { User } from "../user/user.model";
+import { StatusCodes } from "http-status-codes";
+import QueryBuilder from "../utils/queryBuilder";
+import { utils } from "../utils/utils";
+
 
 const initiatePayment = async (req: Request, res: Response) => {
     try {
@@ -125,8 +129,75 @@ const updateStatus = async (req: Request, res: Response) => {
     }
 };
 
+const getFieldTransaction = async (req: Request, res: Response) => {
+    try {
+        const searchableFields = ["userId", "gatewayTransactionId", "phoneNumber"];
+
+        const fieldTransactionQuery = new QueryBuilder(
+            FieldTransaction.find({ isDeleted: { $ne: true }, status: "APPROVED" }).populate("userObjectId", "fullName email userID isFieldVerification"),
+            req.query
+        )
+            .search(searchableFields)
+            .filter()
+            .sort()
+            .paginate()
+            .fields();
+
+        const result = await fieldTransactionQuery.modelQuery;
+        const meta = await fieldTransactionQuery.countTotal();
+
+        utils.sendResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: "Approved Field transactions retrieved successfully",
+            meta,
+            data: result,
+        });
+    } catch (error: any) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+const updateFieldVerificationStatus = async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.params;
+        const { status } = req.body; // 'APPROVE' অথবা 'PENDING' আসবে
+
+        const isVerified = status === "APPROVE";
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { isFieldVerification: isVerified },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(StatusCodes.NOT_FOUND).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        res.status(StatusCodes.OK).json({
+            success: true,
+            message: `User field verification status updated to ${status}`,
+            data: updatedUser,
+        });
+    } catch (error: any) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
 export const fieldTransactionControllers = {
     initiatePayment,
     callback,
-    updateStatus
+    updateStatus,
+    getFieldTransaction,
+    updateFieldVerificationStatus
 };

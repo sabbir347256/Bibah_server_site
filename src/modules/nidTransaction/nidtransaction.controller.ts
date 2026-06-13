@@ -129,8 +129,8 @@ const updateStatus = async (req: Request, res: Response) => {
 
 const getAllNidTransactions = async (req: Request, res: Response) => {
     try {
-        const searchableFields = ["userId", "transactionId", "phoneNumber"];
-
+        const searchableFields = ["userId", "gatewayTransactionId", "phoneNumber"];
+        
         const nidTransactionQuery = new QueryBuilder(
             NidTransaction.find({ isDeleted: { $ne: true }, status: "APPROVED" }).populate("userObjectId", "fullName email userID"),
             req.query
