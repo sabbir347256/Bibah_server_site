@@ -8,5 +8,7 @@ const router = Router();
 
 router.post('/amountWithdraw', checkAuth(Role.AGENT), withdrawController.createWithdrawal);
 router.get('/get-withdrawals', checkAuth(Role.AGENT, Role.ADMIN), withdrawController.getWithdrawals);
+router.patch("/status/:id", checkAuth(Role.ADMIN), withdrawController.updateWithdrawStatus);
+
 
 export const withdrawRoutes = router;   

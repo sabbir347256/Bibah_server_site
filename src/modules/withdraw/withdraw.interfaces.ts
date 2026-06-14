@@ -6,7 +6,7 @@ export interface IWithdraw extends Document {
   method: 'Bkash' | 'Nagad' | 'Rocket';
   number: string;
   amount: number;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "PENDING" | "APPROVED";
   createdAt: Date;
   updatedAt: Date;
 }

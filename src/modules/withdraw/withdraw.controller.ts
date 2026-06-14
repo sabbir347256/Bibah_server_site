@@ -59,7 +59,7 @@ const createWithdrawal = async (req: Request, res: Response) => {
             method,
             number,
             amount: parsedAmount,
-            status: 'pending'
+            status: 'PENDING'
         });
         await withdrawal.save();
 
@@ -121,7 +121,39 @@ const getWithdrawals = async (req: Request, res: Response) => {
 };
 
 
+const updateWithdrawStatus = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const transaction = await Withdraw.findById(id);
+
+        if (!transaction) {
+            return res.status(404).json({ success: false, message: "Transaction not found" });
+        }
+
+        if (transaction.status === "APPROVED") {
+            return res.status(400).json({
+                success: false,
+                message: "This transaction is already approved. Amount cannot be added again."
+            });
+        }
+
+        transaction.status = status;
+        const result = await transaction.save();
+
+        res.status(200).json({
+            success: true,
+            message: `Transaction status updated to ${status} successfully`,
+            data: result,
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 export const withdrawController = {
     createWithdrawal,
-    getWithdrawals
+    getWithdrawals,
+    updateWithdrawStatus
 }

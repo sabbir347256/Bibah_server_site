@@ -27,8 +27,8 @@ const withdrawSchema: Schema = new Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
-    default: 'pending'
+    enum: ['PENDING', 'APPROVED'],
+    default: 'PENDING'
   }
 }, { timestamps: true });
 
