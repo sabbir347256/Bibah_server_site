@@ -136,21 +136,23 @@ const paystationCallback = async (req: Request, res: Response) => {
 
         if (!transaction) {
             return res.status(404).send(
-                getRedirectHTML(`${targetFrontendUrl}/payment-fail?message=TransactionNotFound`, "Transaction Not Found", "Canceled", true)
+                getRedirectHTML(`${targetFrontendUrl}`, "Transaction Not Found", "Canceled", true)
+                // getRedirectHTML(`${targetFrontendUrl}/payment-fail?message=TransactionNotFound`, "Transaction Not Found", "Canceled", true)
             );
         }
 
         targetFrontendUrl = transaction.originUrl || 'https://bibah.app';
 
         if (transaction.status === "APPROVED") {
-            return res.redirect(`${targetFrontendUrl}/payment-success?invoice=${invoice_number}&trx=${transaction.gatewayTransactionId || trx_id}`);
+            // return res.redirect(`${targetFrontendUrl}/payment-success?invoice=${invoice_number}&trx=${transaction.gatewayTransactionId || trx_id}`);
+            return res.redirect(`${targetFrontendUrl}`);
         }
 
         if (paymentStatus === 'successful' || paymentStatus === 'success') {
             const amountToAdd = transaction.amount || 0;
 
             await User.findByIdAndUpdate(transaction.userObjectId, {
-                $set: { isActive: IsActive.ACTIVE },
+                // $set: { isActive: IsActive.ACTIVE },
                 $inc: {
                     mainWalletBalance: amountToAdd,
                     bonusWalletPoints: amountToAdd
@@ -161,12 +163,14 @@ const paystationCallback = async (req: Request, res: Response) => {
             transaction.status = "APPROVED";
             await transaction.save();
 
-            return res.redirect(`${targetFrontendUrl}/payment-success?invoice=${invoice_number}&trx=${trx_id}`);
+            return res.redirect(`${targetFrontendUrl}`);
+            // return res.redirect(`${targetFrontendUrl}/payment-success?invoice=${invoice_number}&trx=${trx_id}`);
         } else {
             transaction.status = "REJECTED";
             await transaction.save();
 
-            return res.redirect(`${targetFrontendUrl}/payment-fail?message=GatewayDeclined`)
+            return res.redirect(`${targetFrontendUrl}`)
+            // return res.redirect(`${targetFrontendUrl}/payment-fail?message=GatewayDeclined`)
 
             // return res.status(200).send(
             //     getRedirectHTML(`${targetFrontendUrl}/payment-fail`, "You canceled the payment session or it failed.", "Payment Canceled", true)

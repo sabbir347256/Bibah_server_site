@@ -30,6 +30,12 @@ const unlockProfile = async (req: Request, res: Response, next: NextFunction) =>
         }
 
         const viewer = await User.findById(viewerId);
+
+
+        if (viewer?.isActive === 'INACTIVE') {
+            throw new appError(StatusCodes.NOT_FOUND, "Please First 130Tk Payment and Active Your Profile");
+        }
+
         if (!viewer) {
             throw new appError(StatusCodes.NOT_FOUND, "Viewer not found!");
         }

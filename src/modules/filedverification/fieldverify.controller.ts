@@ -85,6 +85,37 @@ const getFieldVerifies = async (req: Request, res: Response) => {
     }
 };
 
+const getSpecifiqFieldVerify = async (req: Request, res: Response) => {
+    try {
+        const agentId = (req as any).user?.userProfileId;
+        
+        if (!agentId) {
+            return utils.sendResponse(res, {
+                statusCode: StatusCodes.BAD_REQUEST,
+                success: false,
+                message: "Agent profile ID missing",
+                data: null,
+            });
+        }
+
+        const records = await FieldVerify.find({ agentId }).sort({ createdAt: -1 });
+
+        return utils.sendResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: "Transactions fetched successfully",
+            data: records,
+        });
+    } catch (error) {
+        return utils.sendResponse(res, {
+            statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            success: false,
+            message: "Server Error",
+            data: null,
+        });
+    }
+};
+
 const deleteFieldVerify = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -98,5 +129,6 @@ const deleteFieldVerify = async (req: Request, res: Response) => {
 export const fieldVerifyController = {
     createFieldVerify,
     getFieldVerifies,
-    deleteFieldVerify
+    deleteFieldVerify,
+    getSpecifiqFieldVerify
 };
