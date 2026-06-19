@@ -69,58 +69,10 @@ const initiatePayStationPayment = async (req: Request, res: Response) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-// const paystationCallback = async (req: Request, res: Response) => {
-//     try {
-
-//         const { status, invoice_number, trx_id, opt_a } = req.query;
-//         console.log(opt_a)
-
-//         const targetFrontendUrl = (opt_a as string);
-//         console.log(targetFrontendUrl)
-
-//         const transaction = await Transaction.findOne({ transactionId: invoice_number as string });
-
-//         if (!transaction) {
-//             return res.redirect(`${targetFrontendUrl}/payment-fail?message=TransactionNotFound`);
-//         }
-
-//         if (status === 'Successful') {
-//             if (transaction.status === "APPROVED") {
-//                 return res.redirect(`${targetFrontendUrl}/payment-success`);
-//             }
-
-//             const amountToAdd = transaction.amount || 0;
-
-//             await User.findByIdAndUpdate(transaction.userObjectId, {
-//                 $set: { isActive: IsActive.ACTIVE },
-//                 $inc: {
-//                     mainWalletBalance: amountToAdd,
-//                     bonusWalletPoints: amountToAdd
-//                 }
-//             });
-
-//             transaction.transactionId = trx_id as string;
-//             transaction.status = "APPROVED";
-//             await transaction.save();
-
-//             return res.redirect(`${targetFrontendUrl}/payment-success?invoice=${invoice_number}&trx=${trx_id}`);
-//         } else {
-//             transaction.status = "REJECTED";
-//             await transaction.save();
-
-//             return res.redirect(`${targetFrontendUrl}/payment-fail?invoice=${invoice_number}`);
-//         }
-
-//     } catch (error: any) {
-//         console.error("Callback Error: ", error);
-//         const backupUrl = (req.query.opt_a as string) || 'https://bibah.app';
-//         res.redirect(`${backupUrl}/payment-fail?message=ServerError`);
-//     }
-// };
 
 
 const paystationCallback = async (req: Request, res: Response) => {
-   
+
     try {
         const { status, invoice_number, trx_id } = req.method === 'POST' ? req.body : req.query;
         console.log("PayStation Callback HIT! Data:", req.method === 'POST' ? req.body : req.query);
@@ -152,20 +104,31 @@ const paystationCallback = async (req: Request, res: Response) => {
         if (paymentStatus === 'successful' || paymentStatus === 'success') {
             const amountToAdd = transaction.amount || 0;
 
-            await User.findByIdAndUpdate(transaction.userObjectId, {
-                // $set: { isActive: IsActive.ACTIVE },
-                $inc: {
-                    mainWalletBalance: amountToAdd,
-                    bonusWalletPoints: amountToAdd
-                }
+            const previousApprovedTransaction = await Transaction.findOne({
+                userObjectId: transaction.userObjectId,
+                status: "APPROVED"
             });
+
+            const isFirstRegistrationPayment = !previousApprovedTransaction && amountToAdd === 130;
+
+            const updateFields: any = {
+                $inc: {
+                    mainWalletBalance: amountToAdd
+                }
+            };
+
+            if (isFirstRegistrationPayment) {
+                updateFields.$inc.bonusWalletPoints = amountToAdd;
+            }
+
+            await User.findByIdAndUpdate(transaction.userObjectId, updateFields);
 
             transaction.gatewayTransactionId = trx_id as string;
             transaction.status = "APPROVED";
             await transaction.save();
 
             return res.redirect(`${targetFrontendUrl}`);
-            // return res.redirect(`${targetFrontendUrl}/payment-success?invoice=${invoice_number}&trx=${trx_id}`);
+
         } else {
             transaction.status = "REJECTED";
             await transaction.save();
@@ -184,6 +147,82 @@ const paystationCallback = async (req: Request, res: Response) => {
         );
     }
 };
+// const paystationCallback = async (req: Request, res: Response) => {
+
+//     try {
+//         const { status, invoice_number, trx_id } = req.method === 'POST' ? req.body : req.query;
+//         console.log("PayStation Callback HIT! Data:", req.method === 'POST' ? req.body : req.query);
+//         const paymentStatus = String(status).toLowerCase();
+
+//         if (!invoice_number) {
+//             return res.status(400).send(
+//                 getRedirectHTML('https://bibah.app/payment-fail', "Invalid Request Parameter", "Error", true)
+//             );
+//         }
+
+//         const transaction = await Transaction.findOne({ transactionId: invoice_number as string });
+//         let targetFrontendUrl = 'https://bibah.app';
+
+//         if (!transaction) {
+//             return res.status(404).send(
+//                 getRedirectHTML(`${targetFrontendUrl}`, "Transaction Not Found", "Canceled", true)
+//                 // getRedirectHTML(`${targetFrontendUrl}/payment-fail?message=TransactionNotFound`, "Transaction Not Found", "Canceled", true)
+//             );
+//         }
+
+//         targetFrontendUrl = transaction.originUrl || 'https://bibah.app';
+
+//         if (transaction.status === "APPROVED") {
+//             // return res.redirect(`${targetFrontendUrl}/payment-success?invoice=${invoice_number}&trx=${transaction.gatewayTransactionId || trx_id}`);
+//             return res.redirect(`${targetFrontendUrl}`);
+//         }
+
+//         if (paymentStatus === 'successful' || paymentStatus === 'success') {
+//             const amountToAdd = transaction.amount || 0;
+
+//             const previousApprovedTransaction = await Transaction.findOne({
+//                 userObjectId: transaction.userObjectId,
+//                 status: "APPROVED"
+//             });
+
+//             const isFirstRegistrationPayment = !previousApprovedTransaction && amountToAdd === 130;
+
+//             const updateFields: any = {
+//                 $inc: {
+//                     mainWalletBalance: amountToAdd
+//                 }
+//             };
+
+//             if (isFirstRegistrationPayment) {
+//                 updateFields.$inc.bonusWalletPoints = amountToAdd;
+//             }
+
+//             await User.findByIdAndUpdate(transaction.userObjectId, updateFields);
+
+//             transaction.gatewayTransactionId = trx_id as string;
+//             transaction.status = "APPROVED";
+//             await transaction.save();
+
+//             return res.redirect(`${targetFrontendUrl}`);
+
+//         } else {
+//             transaction.status = "REJECTED";
+//             await transaction.save();
+
+//             return res.redirect(`${targetFrontendUrl}`)
+//             // return res.redirect(`${targetFrontendUrl}/payment-fail?message=GatewayDeclined`)
+
+//             // return res.status(200).send(
+//             //     getRedirectHTML(`${targetFrontendUrl}/payment-fail`, "You canceled the payment session or it failed.", "Payment Canceled", true)
+//             // );
+//         }
+//     } catch (error: any) {
+//         console.error(error);
+//         return res.status(500).send(
+//             getRedirectHTML('https://bibah.app/payment-fail?message=ServerError', "Internal Server Error occurred.", "Error", true)
+//         );
+//     }
+// };
 
 const getRedirectHTML = (url: string, message: string, statusText: string, isError: boolean = true) => {
     const themeColor = isError ? "red" : "green";
