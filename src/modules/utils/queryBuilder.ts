@@ -41,6 +41,30 @@ class QueryBuilder<T> {
 
     const cleanedQueryObj: Record<string, any> = {};
 
+    const fromDate = queryObj['fromDate'];
+    const toDate = queryObj['toDate'];
+
+    if (fromDate || toDate) {
+      const dateFilter: Record<string, any> = {};
+
+      if (fromDate) {
+        const start = new Date(fromDate as string);
+        start.setHours(0, 0, 0, 0); 
+        dateFilter['$gte'] = start;
+      }
+
+      if (toDate) {
+        const end = new Date(toDate as string);
+        end.setHours(23, 59, 59, 999); 
+        dateFilter['$lte'] = end;
+      }
+
+      cleanedQueryObj['createdAt'] = dateFilter;
+    }
+
+    delete queryObj['fromDate'];
+    delete queryObj['toDate'];
+
     Object.keys(queryObj).forEach((key) => {
       const value = queryObj[key];
       if (value !== undefined && value !== "" && value !== "undefined") {
