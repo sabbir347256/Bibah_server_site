@@ -20,7 +20,7 @@ const UserSchema: Schema<IUser> = new Schema(
         totalAmount: { type: Number, default: 0 },
         walletPoints: { type: Number, default: 0 },
         fullName: { type: String, required: true, trim: true },
-        religion: { type: String, required: true },
+        religion: { type: String },
         Height: { type: String, default: null },
         maritalStatus: { type: String, default: null },
         education: { type: String, default: null },
@@ -103,21 +103,40 @@ UserSchema.pre("save", async function () {
     const UserModel = this.constructor as Model<IUser>;
 
     if (!user.userID) {
-        const lastUser = await UserModel.findOne({}, {}, { sort: { createdAt: -1 } });
-
         let currentSequence = 0;
 
-        if (lastUser && lastUser.userID) {
-            const parts = lastUser.userID.split("-");
-            if (parts.length === 2) {
-                currentSequence = parseInt(parts[1] || "0", 10);
+        if (user.role === "AGENT") {
+            const lastAgent = await UserModel.findOne(
+                { userID: /^44\d{3}$/ },
+                {},
+                { sort: { createdAt: -1 } }
+            );
+
+            if (lastAgent && lastAgent.userID) {
+                currentSequence = parseInt(lastAgent.userID.substring(2), 10);
             }
+
+            const nextSequence = currentSequence + 1;
+            const paddedSequence = String(nextSequence).padStart(3, "0");
+            user.userID = `44${paddedSequence}`;
+        } else {
+            const lastUser = await UserModel.findOne(
+                { userID: /^77-/ },
+                {},
+                { sort: { createdAt: -1 } }
+            );
+
+            if (lastUser && lastUser.userID) {
+                const parts = lastUser.userID.split("-");
+                if (parts.length === 2) {
+                    currentSequence = parseInt(parts[1] || "0", 10);
+                }
+            }
+
+            const nextSequence = currentSequence + 1;
+            const paddedSequence = String(nextSequence).padStart(5, "0");
+            user.userID = `77-${paddedSequence}`;
         }
-
-        const nextSequence = currentSequence + 1;
-        const paddedSequence = String(nextSequence).padStart(5, "0");
-
-        user.userID = `77-${paddedSequence}`;
     }
 
     if (!user.ownRefarelID) {

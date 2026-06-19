@@ -54,9 +54,18 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
         }
 
         const isExist = await User.findOne({ email: userData.email.toLowerCase().trim() });
+        const isExistContact = await User.findOne({ contactNo: userData.contactNo.toLowerCase().trim() });
+        const isExistNid = await User.findOne({ nidNo: userData.nidNo.toLowerCase().trim() });
 
         if (isExist && isExist.isVerified) {
-            throw new appError(StatusCodes.BAD_REQUEST, "Email already registered and verified!");
+            throw new appError(StatusCodes.BAD_REQUEST, "Email already registered!");
+        }
+
+        if (isExistContact) {
+            throw new appError(StatusCodes.BAD_REQUEST, "ContactNo already registered!");
+        }
+        if (isExistNid) {
+            throw new appError(StatusCodes.BAD_REQUEST, "Nid already registered!");
         }
 
         if (!userData.password) {
@@ -459,7 +468,7 @@ const updateProfileImage = async (req: Request, res: Response, next: NextFunctio
         const newImageUrl = req.file.path;
 
 
-        
+
         if (type === "avatar") {
             if ((user as any).profileImage) {
                 await deleteOldCloudinaryImage((user as any).profileImage);
@@ -586,6 +595,85 @@ const searchProfiles = async (req: Request, res: Response, next: NextFunction) =
     }
 };
 
+
+const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            throw new appError(StatusCodes.BAD_REQUEST, "Email is required!");
+        }
+
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+        if (!user) {
+            throw new appError(StatusCodes.NOT_FOUND, "User not found with this email!");
+        }
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
+
+        user.verificationCode = otpCode;
+        user.verificationExpiry = expiryTime;
+        await user.save();
+
+        try {
+            await sendVerificationEmail(user.email, otpCode);
+        } catch (emailError) {
+            throw new appError(StatusCodes.INTERNAL_SERVER_ERROR, "Failed to send OTP email.");
+        }
+
+        return utils.sendResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: "A 6-digit OTP has been sent to your email.",
+            data: ''
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { email, otpCode, newPassword } = req.body;
+
+        if (!email || !otpCode || !newPassword) {
+            throw new appError(StatusCodes.BAD_REQUEST, "All fields are required!");
+        }
+
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+        if (!user) {
+            throw new appError(StatusCodes.NOT_FOUND, "User not found!");
+        }
+
+        if (!user.verificationCode || user.verificationCode !== otpCode) {
+            throw new appError(StatusCodes.BAD_REQUEST, "Invalid OTP code!");
+        }
+
+        if (!user.verificationExpiry || new Date() > user.verificationExpiry) {
+            throw new appError(StatusCodes.BAD_REQUEST, "OTP has expired!");
+        }
+
+        const hashedPassword = await bcryptjs.hash(newPassword, 10);
+
+        user.password = hashedPassword;
+        (user as any).verificationCode = null;
+        (user as any).verificationExpiry = null;
+        await user.save();
+
+        return utils.sendResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: "Password reset successful!",
+            data: ''
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const userControllers = {
     registerUser,
     verifyEmail,
@@ -596,5 +684,7 @@ export const userControllers = {
     updateProfile,
     searchProfiles,
     getAllAgent,
-    updateProfileImage
+    updateProfileImage,
+    forgotPassword,
+    resetPassword
 };
