@@ -27,7 +27,7 @@ export const seedSuperAdmin = async () => {
             profession : "Admin",
             role: Role.ADMIN, 
             contactNo: "01700000000", 
-            nidNo: "0000000000000",   
+            nidNo: "1",   
             isVerified: true,
             isApproved: true,
             isActive: IsActive.ACTIVE,

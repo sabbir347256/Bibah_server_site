@@ -473,7 +473,9 @@ const updateUserStatus = async (req: Request, res: Response) => {
 
 const deleteUser = async (req: Request, res: Response) => {
     try {
+        console.log('adflj');
         const { id } = req.params;
+        console.log(id);
 
         const result = await User.findByIdAndUpdate(
             id,
