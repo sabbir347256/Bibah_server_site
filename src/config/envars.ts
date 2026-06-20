@@ -20,6 +20,9 @@ const envVars = {
   BACKEND_URL: process.env.BACKEND_URL as string,
   PAYSTATION_MERCHANT_ID: process.env.PAYSTATION_MERCHANT_ID as string,
   PAYSTATION_PASSWORD: process.env.PAYSTATION_PASSWORD as string,
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID as string,
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET as string,
+  FRONTEND_URL: process.env.FRONTEND_URL as string,
 };
 
 export = envVars;

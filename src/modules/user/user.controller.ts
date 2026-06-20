@@ -11,6 +11,7 @@ import QueryBuilder from "../utils/queryBuilder";
 import jwt from "jsonwebtoken";
 import { authenticate } from "passport";
 import { deleteOldCloudinaryImage } from "../../config/imagefunciton";
+import { IsActive } from "./user.interface";
 
 
 interface MulterRequest extends Request {
@@ -26,15 +27,24 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
         if (userData?.bonusRefarelID) {
             const referrer = await User.findOne({ ownRefarelID: userData.bonusRefarelID });
 
-            if (referrer) {
-                if (referrer.role === "AGENT") {
+            if (referrer && referrer.isActive === IsActive.ACTIVE) {
+                if (referrer.role === 'AGENT') {
                     referrer.totalAmount = (referrer.totalAmount || 0) + 70;
-                } else if (referrer.role === "USER") {
+                } else if (referrer.role === 'USER') {
                     referrer.bonusWalletPoints = (referrer.bonusWalletPoints || 0) + 100;
                 }
-
                 await referrer.save();
             }
+
+            // if (referrer) {
+            //     if (referrer.role === "AGENT") {
+            //         referrer.totalAmount = (referrer.totalAmount || 0) + 70;
+            //     } else if (referrer.role === "USER") {
+            //         referrer.bonusWalletPoints = (referrer.bonusWalletPoints || 0) + 100;
+            //     }
+
+            //     await referrer.save();
+            // }
         }
 
         if (userData.auths && typeof userData.auths === "string") {

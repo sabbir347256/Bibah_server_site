@@ -6,6 +6,7 @@ import { sendResponse } from "../utils/utils";
 import httpStatus from "http-status-codes";
 import passport from "passport";
 import { catchAsync } from "../utils/catchAsyn";
+import envVars from "../../config/envars";
 
 
 const credentialLogin = catchAsync(
@@ -19,15 +20,6 @@ const credentialLogin = catchAsync(
         if (!user) {
           return next(new appError(401, info?.message || "Login failed"));
         }
-
-        // if (user.isApproved === false) {
-        //   return next(
-        //     new appError(
-        //       401,
-        //       "You will be able to log in after the admin approves your account."
-        //     )
-        //   );
-        // }
 
         const userTokens = await createUserToken(user);
         const { password: pass, ...rest } = user.toObject();
@@ -94,9 +86,27 @@ const agentLogin = catchAsync(
   }
 );
 
+const googleCallback = async (req: Request, res: Response, next: NextFunction) => {
+  passport.authenticate("google", { session: false }, async (err: any, user: any) => {
+    try {
+      if (err || !user) {
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_auth_failed`);
+      }
+      const userTokens = await createUserToken(user);
+      setAuthCookies(res, userTokens);
+
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/login-success?token=${userTokens.accessToken}`
+      );
+    } catch (error) {
+      return next(error);
+    }
+  })(req, res, next);
+};
 
 
 export const authUserController = {
   credentialLogin,
-  agentLogin
+  agentLogin,
+  googleCallback
 };
