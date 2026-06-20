@@ -24,28 +24,20 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
         const userData = { ...req.body };
         const file = (req as any).file;
 
-        if (userData?.bonusRefarelID) {
-            const referrer = await User.findOne({ ownRefarelID: userData.bonusRefarelID });
+        // if (userData?.bonusRefarelID) {
+        //     const referrer = await User.findOne({ ownRefarelID: userData.bonusRefarelID });
 
-            if (referrer && referrer.isActive === IsActive.ACTIVE) {
-                if (referrer.role === 'AGENT') {
-                    referrer.totalAmount = (referrer.totalAmount || 0) + 70;
-                } else if (referrer.role === 'USER') {
-                    referrer.bonusWalletPoints = (referrer.bonusWalletPoints || 0) + 100;
-                }
-                await referrer.save();
-            }
+        //     if (referrer && referrer.isActive === IsActive.ACTIVE) {
+        //         if (referrer.role === 'AGENT') {
+        //             referrer.totalAmount = (referrer.totalAmount || 0) + 70;
+        //         } else if (referrer.role === 'USER') {
+        //             referrer.bonusWalletPoints = (referrer.bonusWalletPoints || 0) + 100;
+        //         }
+        //         await referrer.save();
+        //     }
 
-            // if (referrer) {
-            //     if (referrer.role === "AGENT") {
-            //         referrer.totalAmount = (referrer.totalAmount || 0) + 70;
-            //     } else if (referrer.role === "USER") {
-            //         referrer.bonusWalletPoints = (referrer.bonusWalletPoints || 0) + 100;
-            //     }
 
-            //     await referrer.save();
-            // }
-        }
+        // }
 
         if (userData.auths && typeof userData.auths === "string") {
             try {
@@ -404,20 +396,70 @@ const getAllAgent = async (req: Request, res: Response, next: NextFunction) => {
         next(error);
     }
 };
+// const updateUserStatus = async (req: Request, res: Response) => {
+//     try {
+//         const { id } = req.params;
+//         const { status } = req.body;
+
+//         const result = await User.findByIdAndUpdate(
+//             id,
+//             { isActive: status },
+//             { new: true, runValidators: true }
+//         );
+
+//         if (!result) {
+//             return res.status(404).json({ success: false, message: "User not found" });
+//         }
+
+//         res.status(200).json({
+//             success: true,
+//             message: "User status updated successfully",
+//             data: result,
+//         });
+//     } catch (error: any) {
+//         res.status(500).json({ success: false, message: error.message });
+//     }
+// };
+
+
 const updateUserStatus = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
+
+        const currentFields = await User.findById(id);
+        if (!currentFields) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        if (currentFields.bonusRefarelID) {
+            const referrer = await User.findOne({ ownRefarelID: currentFields.bonusRefarelID }) as any;
+
+            if (referrer) {
+                if (currentFields.isActive !== "ACTIVE" && status === "ACTIVE") {
+                    if (referrer.role === "AGENT") {
+                        referrer.totalAmount = (referrer.totalAmount || 0) + 70;
+                    } else if (referrer.role === "USER") {
+                        referrer.bonusWalletPoints = (referrer.bonusWalletPoints || 0) + 100;
+                    }
+                    await referrer.save();
+                }
+                else if (currentFields.isActive === "ACTIVE" && status !== "ACTIVE") {
+                    if (referrer.role === "AGENT") {
+                        referrer.totalAmount = Math.max(0, (referrer.totalAmount || 0) - 70);
+                    } else if (referrer.role === "USER") {
+                        referrer.bonusWalletPoints = Math.max(0, (referrer.bonusWalletPoints || 0) - 100);
+                    }
+                    await referrer.save();
+                }
+            }
+        }
 
         const result = await User.findByIdAndUpdate(
             id,
             { isActive: status },
             { new: true, runValidators: true }
         );
-
-        if (!result) {
-            return res.status(404).json({ success: false, message: "User not found" });
-        }
 
         res.status(200).json({
             success: true,
