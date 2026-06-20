@@ -30,7 +30,7 @@ const initiatePayment = async (req: Request, res: Response) => {
         formData.append('invoice_number', invoiceNumber);
         formData.append('currency', 'BDT');
         formData.append('payment_amount', String(amount || 2340));
-        formData.append('pay_with_charge', '1');
+        // formData.append('pay_with_charge', '1');
         formData.append('reference', `Field Verification User: ${userId}`);
         formData.append('cust_name', name || "User Name");
         formData.append('cust_phone', phone || "01700000000");
