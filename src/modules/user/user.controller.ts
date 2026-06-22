@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { StatusCodes } from "http-status-codes";
 import { User } from "./user.model";
 import bcryptjs from "bcryptjs";
-import { sendVerificationEmail } from "../utils/email.utils";
+import { sendVerificationEmail, sendVerificationSMS } from "../utils/email.utils";
 import appError from "../../errorsHelper/appError";
 import { utils } from "../utils/utils";
 import httpStatus from "http-status-codes";
@@ -24,21 +24,6 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
         const userData = { ...req.body };
         const file = (req as any).file;
 
-        // if (userData?.bonusRefarelID) {
-        //     const referrer = await User.findOne({ ownRefarelID: userData.bonusRefarelID });
-
-        //     if (referrer && referrer.isActive === IsActive.ACTIVE) {
-        //         if (referrer.role === 'AGENT') {
-        //             referrer.totalAmount = (referrer.totalAmount || 0) + 70;
-        //         } else if (referrer.role === 'USER') {
-        //             referrer.bonusWalletPoints = (referrer.bonusWalletPoints || 0) + 100;
-        //         }
-        //         await referrer.save();
-        //     }
-
-
-        // }
-
         if (userData.auths && typeof userData.auths === "string") {
             try {
                 userData.auths = JSON.parse(userData.auths);
@@ -54,10 +39,13 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
         if (!userData.email) {
             throw new appError(StatusCodes.BAD_REQUEST, "Email is required!");
         }
+        if (!userData.contactNo) {
+            throw new appError(StatusCodes.BAD_REQUEST, "Contact number is required!");
+        }
 
         const isExist = await User.findOne({ email: userData.email.toLowerCase().trim() });
-        const isExistContact = await User.findOne({ contactNo: userData.contactNo.toLowerCase().trim() });
-        const isExistNid = await User.findOne({ nidNo: userData.nidNo.toLowerCase().trim() });
+        const isExistContact = await User.findOne({ contactNo: userData.contactNo.trim() });
+        const isExistNid = userData.nidNo ? await User.findOne({ nidNo: userData.nidNo.toLowerCase().trim() }) : null;
 
         if (isExist && isExist.isVerified) {
             throw new appError(StatusCodes.BAD_REQUEST, "Email already registered!");
@@ -104,12 +92,18 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
             });
         }
 
-        if (!isAgent) {
+        if (!isAgent && otpCode) {
             try {
-                await sendVerificationEmail(userRecord.email, otpCode!);
-            } catch (emailError) {
-                console.error("Email sending failed: ", emailError);
-                throw new appError(StatusCodes.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again.");
+                await sendVerificationEmail(userRecord.email, otpCode);
+
+                await sendVerificationSMS(userRecord.contactNo, otpCode);
+
+            } catch (error) {
+                console.error("Verification dispatch failed: ", error);
+                throw new appError(
+                    StatusCodes.INTERNAL_SERVER_ERROR,
+                    "Failed to send verification code via Email/SMS. Please check your credentials and try again."
+                );
             }
         }
 
@@ -124,7 +118,7 @@ const registerUser = async (req: Request, res: Response, next: NextFunction) => 
             success: true,
             message: isAgent
                 ? "Agent registered successfully, account is now active and approved."
-                : "Registration initial stage successful. Verification code sent to your email.",
+                : "Registration initial stage successful. Verification code sent to your email and mobile number.",
             data: result,
         });
     } catch (error) {

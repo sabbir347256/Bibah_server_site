@@ -23,6 +23,7 @@ const envVars = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID as string,
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET as string,
   FRONTEND_URL: process.env.FRONTEND_URL as string,
+  SMS_API_TOKEN: process.env.SMS_API_TOKEN as string,
 };
 
 export = envVars;
