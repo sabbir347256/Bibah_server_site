@@ -6,6 +6,7 @@ import { User } from "../user/user.model";
 import { utils } from "../utils/utils";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
+import { PhoneUnlockTransaction } from "../contactNumberPayment/number.model";
 
 const unlockProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -92,12 +93,12 @@ const getProfileDetails = async (req: Request, res: Response, next: NextFunction
 
         if (authHeader && authHeader.startsWith("Bearer ")) {
             const token = authHeader.split(" ")[1];
-            
+
             if (token && token !== "null" && token !== "undefined") {
                 try {
                     const secretKey = process.env.JWT_ACCESS_SECRET || "secret";
                     const decoded = jwt.verify(token, secretKey as string) as any;
-                    viewerId = decoded?.userId || decoded?.id || decoded?._id;
+                    viewerId = decoded?.userId || decoded?.id || decoded?._id || decoded?.data?._id;
                 } catch (jwtError) {
                     console.error("JWT Verification Error on Refresh:", jwtError);
                     viewerId = null;
@@ -110,22 +111,37 @@ const getProfileDetails = async (req: Request, res: Response, next: NextFunction
             throw new appError(StatusCodes.NOT_FOUND, "User not found!");
         }
 
-        let isUnlocked = false;
+        let isProfileUnlocked = false;
+        let isPhoneUnlocked = false;
+
         if (viewerId) {
-            const unlockRecord = await ProfileUnlock.findOne({
-                unlockedBy: new mongoose.Types.ObjectId(viewerId),
+            const profileUnlockRecord = await ProfileUnlock.findOne({
+                unlockedBy: new mongoose.Types.ObjectId(viewerId as string),
                 targetProfile: new mongoose.Types.ObjectId(id as string),
             });
-            isUnlocked = !!unlockRecord;
+            isProfileUnlocked = !!profileUnlockRecord;
+
+            const phoneUnlockRecord = await PhoneUnlockTransaction.findOne({
+                buyerUserObjectId: new mongoose.Types.ObjectId(viewerId as string),
+                targetUserObjectId: new mongoose.Types.ObjectId(id as string),
+                status: "APPROVED"
+            });
+            isPhoneUnlocked = !!phoneUnlockRecord;
         }
 
         const isOwnProfile = viewerId && viewerId.toString() === id.toString();
-        const showContactDetails = isUnlocked || isOwnProfile;
+
+        const showProfileDetails = isProfileUnlocked || isOwnProfile;
+        const showPhoneDetails = isPhoneUnlocked || isOwnProfile;
 
         const responseData = targetUser.toObject();
-        if (!showContactDetails) {
-            responseData.contactNo = "LOCKED";
+
+        if (!showProfileDetails) {
             responseData.email = "LOCKED";
+        }
+
+        if (!showPhoneDetails && responseData.contactNo) {
+            responseData.contactNo = `${responseData.contactNo.substring(0, 5)}******`;
         }
 
         return utils.sendResponse(res, {
@@ -134,7 +150,8 @@ const getProfileDetails = async (req: Request, res: Response, next: NextFunction
             message: "Profile details fetched successfully.",
             data: {
                 profile: responseData,
-                isProfileLocked: !showContactDetails,
+                isProfileLocked: !showProfileDetails,
+                isPhoneLocked: !showPhoneDetails,
             },
         });
     } catch (error) {

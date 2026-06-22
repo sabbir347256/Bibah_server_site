@@ -7,6 +7,8 @@ import { documentVerification } from "../modules/documentVerification/document.r
 import { withdrawRoutes } from "../modules/withdraw/withdraw.routes";
 import { nidTransactionRoutes } from "../modules/nidTransaction/nidtransaction.routes";
 import { fieldTransactionRoutes } from "../modules/fieldtransaction/fieldtransaction.routes";
+import { phoneUnlockPaymentRoutes } from "../modules/contactNumberPayment/number.routes";
+import { premiumPaymentRoutes } from "../modules/premiumefunction/premium.routes";
 
 export const router = Router();
 
@@ -42,7 +44,15 @@ const moduleRoutes = [
   {
     path: "/fieldTransaction",
     router: fieldTransactionRoutes,
-  }
+  },
+  {
+    path: "/phoneunlock",
+    router: phoneUnlockPaymentRoutes,
+  },
+  {
+    path: "/premiumPayment",
+    router: premiumPaymentRoutes,
+  },
 
 ];
 

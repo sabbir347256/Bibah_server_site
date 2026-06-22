@@ -7,8 +7,8 @@ import { nidController } from "./document.controller";
 
 const router = Router();
 
-router.post("/upload-nid",checkAuth(Role.USER),upload.array("nidImages", 2),nidController.uploadNid);
-router.get("/check-nid/:userId", checkAuth(Role.USER), nidController.checkNidSubmission);
+router.post("/upload-nid",checkAuth(Role.USER, Role.PREMIUM),upload.array("nidImages", 2),nidController.uploadNid);
+router.get("/check-nid/:userId", checkAuth(Role.USER, Role.PREMIUM), nidController.checkNidSubmission);
 router.get("/nid-submissions", checkAuth(Role.ADMIN), nidController.getAllNidSubmissions);
 router.patch("/nid-status/:id", checkAuth(Role.ADMIN), nidController.updateNidStatus);
 router.delete("/nid-delete/:id", checkAuth(Role.ADMIN), nidController.deleteNidSubmission);

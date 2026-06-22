@@ -4,6 +4,7 @@ export enum Role {
     ADMIN = "ADMIN",
     AGENT = "AGENT",
     USER = "USER",
+    PREMIUM = "PREMIUM",
 }
 
 export type IsAuthProvider = {

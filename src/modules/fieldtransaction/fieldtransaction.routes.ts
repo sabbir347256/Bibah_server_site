@@ -5,7 +5,7 @@ import { Role } from "../user/user.interface";
 
 const router = Router();
 
-router.post("/transaction-initiate",checkAuth(Role.USER), fieldTransactionControllers.initiatePayment);
+router.post("/transaction-initiate",checkAuth(Role.USER,Role.PREMIUM), fieldTransactionControllers.initiatePayment);
 router.post("/transactoin-callback", fieldTransactionControllers.callback);
 router.get("/transactoin-callback", fieldTransactionControllers.callback);
 router.patch("/update-status/:id",checkAuth(Role.ADMIN), fieldTransactionControllers.updateStatus);

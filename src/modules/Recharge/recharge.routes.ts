@@ -6,10 +6,10 @@ import { transactionControllers } from "./Recharge.controller";
 const router = Router();
 
 
-router.post("/initiate-paystation", checkAuth(Role.USER, Role.ADMIN, Role.AGENT), transactionControllers.initiatePayStationPayment);
+router.post("/initiate-paystation", checkAuth(Role.USER,Role.PREMIUM, Role.ADMIN, Role.AGENT), transactionControllers.initiatePayStationPayment);
 router.get("/paystation-callback", transactionControllers.paystationCallback);
 
-router.post("/", checkAuth(Role.USER, Role.ADMIN, Role.AGENT), transactionControllers.createTransaction);
+router.post("/", checkAuth(Role.USER,Role.PREMIUM, Role.ADMIN, Role.AGENT), transactionControllers.createTransaction);
 router.get("/", checkAuth(Role.ADMIN), transactionControllers.getAllTransactions);
 router.patch("/status/:id", checkAuth(Role.ADMIN), transactionControllers.updateTransactionStatus);
 router.delete("/:id", checkAuth(Role.ADMIN), transactionControllers.deleteTransaction);
