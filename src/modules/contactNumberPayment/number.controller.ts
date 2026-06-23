@@ -38,9 +38,13 @@ const initiatePhoneUnlockPayment = async (req: Request, res: Response) => {
         formData.append('opt_a', originUrl);
         formData.append('callback_url', `${envVars.BACKEND_URL}/api/v1/phoneUnlock/callback`);
 
-        const response = await axios.post('https://sandbox.paystation.com.bd/initiate-payment', formData, {
+        const response = await axios.post('https://api.paystation.com.bd/initiate-payment', formData, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
+
+        // const response = await axios.post('https://sandbox.paystation.com.bd/initiate-payment', formData, {
+        //     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        // });
 
         if (response.data.status_code === "200" && response.data.status === "success") {
             return res.status(200).json({
@@ -97,7 +101,7 @@ const handlePhoneUnlockCallback = async (req: Request, res: Response) => {
 
 const getAllPhoneUnlockTransactions = async (req: Request, res: Response) => {
     const transactionQuery = new QueryBuilder(
-        PhoneUnlockTransaction.find({"status" : "APPROVED"}).populate("buyerUserObjectId").populate("targetUserObjectId"),
+        PhoneUnlockTransaction.find({ "status": "APPROVED" }).populate("buyerUserObjectId").populate("targetUserObjectId"),
         req.query
     )
         .search(["transactionId", "phoneNumber", "status"])

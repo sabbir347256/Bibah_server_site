@@ -46,13 +46,13 @@ const initiatePayStationPayment = async (req: Request, res: Response) => {
 
         formData.append('callback_url', `${envVars.BACKEND_URL}/api/v1/transaction/paystation-callback`);
 
-        // const response = await axios.post('https://api.paystation.com.bd/initiate-payment', formData, {
-        //     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        // });
-
-        const response = await axios.post('https://sandbox.paystation.com.bd/initiate-payment', formData, {
+        const response = await axios.post('https://api.paystation.com.bd/initiate-payment', formData, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
+
+        // const response = await axios.post('https://sandbox.paystation.com.bd/initiate-payment', formData, {
+        //     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        // });
 
         // console.log(response.data)
 
