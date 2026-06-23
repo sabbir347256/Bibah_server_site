@@ -97,7 +97,7 @@ const handlePhoneUnlockCallback = async (req: Request, res: Response) => {
 
 const getAllPhoneUnlockTransactions = async (req: Request, res: Response) => {
     const transactionQuery = new QueryBuilder(
-        PhoneUnlockTransaction.find().populate("buyerUserObjectId").populate("targetUserObjectId"),
+        PhoneUnlockTransaction.find({"status" : "APPROVED"}).populate("buyerUserObjectId").populate("targetUserObjectId"),
         req.query
     )
         .search(["transactionId", "phoneNumber", "status"])
