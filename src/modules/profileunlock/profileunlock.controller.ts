@@ -81,6 +81,84 @@ const unlockProfile = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
+// const getProfileDetails = async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//         const { id } = req.params;
+//         if (!id) {
+//             throw new appError(StatusCodes.BAD_REQUEST, "Profile ID is required!");
+//         }
+
+//         let viewerId = null;
+//         const authHeader = req.headers.authorization;
+
+//         if (authHeader && authHeader.startsWith("Bearer ")) {
+//             const token = authHeader.split(" ")[1];
+
+//             if (token && token !== "null" && token !== "undefined") {
+//                 try {
+//                     const secretKey = process.env.JWT_ACCESS_SECRET || "secret";
+//                     const decoded = jwt.verify(token, secretKey as string) as any;
+//                     viewerId = decoded?.userId || decoded?.id || decoded?._id || decoded?.data?._id;
+//                 } catch (jwtError) {
+//                     console.error("JWT Verification Error on Refresh:", jwtError);
+//                     viewerId = null;
+//                 }
+//             }
+//         }
+
+//         const targetUser = await User.findById(id).select("-password");
+//         if (!targetUser) {
+//             throw new appError(StatusCodes.NOT_FOUND, "User not found!");
+//         }
+
+//         let isProfileUnlocked = false;
+//         let isPhoneUnlocked = false;
+
+//         if (viewerId) {
+//             const profileUnlockRecord = await ProfileUnlock.findOne({
+//                 unlockedBy: new mongoose.Types.ObjectId(viewerId as string),
+//                 targetProfile: new mongoose.Types.ObjectId(id as string),
+//             });
+//             isProfileUnlocked = !!profileUnlockRecord;
+
+//             const phoneUnlockRecord = await PhoneUnlockTransaction.findOne({
+//                 buyerUserObjectId: new mongoose.Types.ObjectId(viewerId as string),
+//                 targetUserObjectId: new mongoose.Types.ObjectId(id as string),
+//                 status: "APPROVED"
+//             });
+//             isPhoneUnlocked = !!phoneUnlockRecord;
+//         }
+
+//         const isOwnProfile = viewerId && viewerId.toString() === id.toString();
+
+//         const showProfileDetails = isProfileUnlocked || isOwnProfile;
+//         const showPhoneDetails = isPhoneUnlocked || isOwnProfile;
+
+//         const responseData = targetUser.toObject();
+
+//         if (!showProfileDetails) {
+//             responseData.email = "LOCKED";
+//         }
+
+//         if (!showPhoneDetails && responseData.contactNo) {
+//             responseData.contactNo = `${responseData.contactNo.substring(0, 5)}******`;
+//         }
+
+//         return utils.sendResponse(res, {
+//             statusCode: StatusCodes.OK,
+//             success: true,
+//             message: "Profile details fetched successfully.",
+//             data: {
+//                 profile: responseData,
+//                 isProfileLocked: !showProfileDetails,
+//                 isPhoneLocked: !showPhoneDetails,
+//             },
+//         });
+//     } catch (error) {
+//         next(error);
+//     }
+// };
+
 const getProfileDetails = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
@@ -89,6 +167,7 @@ const getProfileDetails = async (req: Request, res: Response, next: NextFunction
         }
 
         let viewerId = null;
+        let isViewerPremium = false;
         const authHeader = req.headers.authorization;
 
         if (authHeader && authHeader.startsWith("Bearer ")) {
@@ -99,6 +178,16 @@ const getProfileDetails = async (req: Request, res: Response, next: NextFunction
                     const secretKey = process.env.JWT_ACCESS_SECRET || "secret";
                     const decoded = jwt.verify(token, secretKey as string) as any;
                     viewerId = decoded?.userId || decoded?.id || decoded?._id || decoded?.data?._id;
+
+                    const viewerRole = decoded?.role || decoded?.data?.role;
+                    if (viewerRole === "PREMIUM") {
+                        isViewerPremium = true;
+                    } else if (viewerId) {
+                        const viewerUser = await User.findById(viewerId).select("role");
+                        if (viewerUser && viewerUser.role === "PREMIUM") {
+                            isViewerPremium = true;
+                        }
+                    }
                 } catch (jwtError) {
                     console.error("JWT Verification Error on Refresh:", jwtError);
                     viewerId = null;
@@ -131,8 +220,8 @@ const getProfileDetails = async (req: Request, res: Response, next: NextFunction
 
         const isOwnProfile = viewerId && viewerId.toString() === id.toString();
 
-        const showProfileDetails = isProfileUnlocked || isOwnProfile;
-        const showPhoneDetails = isPhoneUnlocked || isOwnProfile;
+        const showProfileDetails = isProfileUnlocked || isOwnProfile || isViewerPremium;
+        const showPhoneDetails = isPhoneUnlocked || isOwnProfile || isViewerPremium;
 
         const responseData = targetUser.toObject();
 
