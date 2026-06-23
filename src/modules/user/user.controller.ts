@@ -606,20 +606,21 @@ const searchProfiles = async (req: Request, res: Response, next: NextFunction) =
         if (query.familyStatus) {
             cleanedQueryObj.maritalStatus = { $regex: query.familyStatus, $options: "i" };
         }
+        if (query.gender) {
+            cleanedQueryObj.gender = query.gender;
+        }
         if (query.education) {
             const eduArray = (query.education as string).split(",");
             cleanedQueryObj.education = { $in: eduArray.map(edu => new RegExp(edu, "i")) };
         }
 
-        const excludeFields = ["searchTerm", "sort", "limit", "page", "fields", "religion", "profession", "currentDistrict", "education", "familyStatus"];
+        const excludeFields = ["searchTerm", "sort", "limit", "page", "fields", "religion", "profession", "currentDistrict", "education", "familyStatus", "gender"];
         excludeFields.forEach((el) => delete query[el]);
 
         const combinedQuery: Record<string, any> = {
             ...query,
             ...cleanedQueryObj,
             role: { $nin: ["AGENT", "ADMIN"] },
-            // isDeleted: false,
-            // isApproved: false
         };
 
         const searchableFields = ["fullName", "userID", "email", "profession"];
