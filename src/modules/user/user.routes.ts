@@ -24,5 +24,6 @@ router.put("/update-image/:type", checkAuth(Role.USER, Role.PREMIUM, Role.AGENT,
 router.put("/update-image/cover", checkAuth(Role.USER, Role.PREMIUM), upload.single("image"), (req, res, next) => { req.params.type = "cover"; next(); }, userControllers.updateProfileImage);
 router.post("/forgot-password", userControllers.forgotPassword);
 router.post("/reset-password", userControllers.resetPassword);
+router.get("/dashboard-stats",checkAuth(Role.ADMIN), userControllers?.getDashboardStats);
 
 export const userRoutes = router;   

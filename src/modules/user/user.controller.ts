@@ -722,6 +722,115 @@ const resetPassword = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
+const getDashboardStats = async (req: Request, res: Response) => {
+    try {
+        const counts = await User.aggregate([
+            {
+                $facet: {
+                    roleCounts: [
+                        { $group: { _id: "$role", count: { $sum: 1 } } }
+                    ],
+                    verifiedUsers: [
+                        {
+                            $match: {
+                                isActive: "ACTIVE",
+                                isDocumentVerification: true,
+                                isFieldVerification: true
+                            }
+                        },
+                        { $count: "count" }
+                    ],
+                    genderCounts: [
+                        { $group: { _id: "$gender", count: { $sum: 1 } } }
+                    ]
+                }
+            }
+        ]);
+
+        let normalUsers = 0;
+        let totalAgents = 0;
+        let premiumUsers = 0;
+
+        counts[0]?.roleCounts.forEach((r: any) => {
+            if (r._id === "USER") normalUsers = r.count;
+            if (r._id === "AGENT") totalAgents = r.count;
+            if (r._id === "PREMIUM") premiumUsers = r.count;
+        });
+
+        const totalUsers = normalUsers + premiumUsers;
+        const verified = counts[0]?.verifiedUsers[0]?.count || 0;
+
+        let male = 0;
+        let female = 0;
+        counts[0]?.genderCounts.forEach((g: any) => {
+            if (g._id === "Male" || g._id === "male") male = g.count;
+            if (g._id === "Female" || g._id === "female") female = g.count;
+        });
+
+        const twelveMonthsAgo = new Date();
+        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
+        twelveMonthsAgo.setDate(1);
+        twelveMonthsAgo.setHours(0, 0, 0, 0);
+
+        const monthlyRegistration = await User.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: twelveMonthsAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$createdAt" },
+                        month: { $month: "$createdAt" }
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { "_id.year": 1, "_id.month": 1 }
+            }
+        ]);
+
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const graphDataMap: { [key: string]: number } = {};
+
+        for (let i = 0; i < 12; i++) {
+            const d = new Date();
+            d.setMonth(d.getMonth() - 11 + i);
+            const label = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+            graphDataMap[label] = 0;
+        }
+
+        monthlyRegistration.forEach((item: any) => {
+            const label = `${monthNames[item._id.month - 1]} ${item._id.year}`;
+            if (graphDataMap[label] !== undefined) {
+                graphDataMap[label] = item.count;
+            }
+        });
+
+        const graphData = Object.keys(graphDataMap).map(key => ({
+            month: key,
+            count: graphDataMap[key]
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: {
+                totalUsers,
+                totalAgents,
+                premiumUsers,
+                verifiedUsers: verified,
+                maleUsers: male,
+                femaleUsers: female,
+                graphData
+            }
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 export const userControllers = {
     registerUser,
     verifyEmail,
@@ -734,5 +843,6 @@ export const userControllers = {
     getAllAgent,
     updateProfileImage,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    getDashboardStats
 };
