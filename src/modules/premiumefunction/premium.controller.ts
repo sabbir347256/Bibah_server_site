@@ -3,6 +3,9 @@ import { PremiumTransaction } from "./premium.model";
 import envVars from "../../config/envars";
 import axios from "axios";
 import { User } from "../user/user.model";
+import QueryBuilder from "../utils/queryBuilder";
+import { StatusCodes } from "http-status-codes";
+
 
 const initiatePremiumPayment = async (req: Request, res: Response) => {
     try {
@@ -121,7 +124,85 @@ const handlePremiumCallback = async (req: Request, res: Response) => {
     }
 };
 
+
+const getAllPremiumTransactions = async (req: Request, res: Response) => {
+    const transactionQuery = new QueryBuilder(
+        PremiumTransaction.find().populate("userObjectId"),
+        req.query
+    )
+        .search(["transactionId", "phoneNumber", "status"])
+        .filter()
+        .sort()
+        .paginate()
+        .fields();
+
+    const result = await transactionQuery.modelQuery;
+    const meta = await transactionQuery.countTotal();
+
+    return res.status(StatusCodes.OK).json({
+        success: true,
+        statusCode: StatusCodes.OK,
+        message: "Transactions retrieved successfully",
+        meta,
+        data: result,
+    });
+};
+
+const updateTransactionStatus = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { status, type } = req.body;
+
+    const transaction = await PremiumTransaction.findById(id);
+    if (!transaction) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+            success: false,
+            message: "Transaction not found",
+        });
+    }
+
+
+    const updateData: Record<string, any> = {};
+
+    if (type === "NID") {
+        updateData.isDocumentVerification = status === "APPROVED" ? true : false;
+    } else if (type === "FIELD") {
+        updateData.isFieldVerification = status === "APPROVED" ? true : false;
+    }
+
+
+    if (Object.keys(updateData).length > 0) {
+        await User.findByIdAndUpdate(transaction.userObjectId, updateData);
+    }
+
+    return res.status(StatusCodes.OK).json({
+        success: true,
+        message: `${type} verification status updated to ${status} successfully`,
+    });
+};
+
+const deletePremiumTransaction = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const transaction = await PremiumTransaction.findByIdAndDelete(id);
+
+    if (!transaction) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+            success: false,
+            message: "Transaction not found",
+        });
+    }
+
+    return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Transaction deleted successfully",
+        data: transaction,
+    });
+};
+
+
 export const premiumPaymentControllers = {
     initiatePremiumPayment,
-    handlePremiumCallback
+    handlePremiumCallback,
+    getAllPremiumTransactions,
+    updateTransactionStatus,
+    deletePremiumTransaction
 };
