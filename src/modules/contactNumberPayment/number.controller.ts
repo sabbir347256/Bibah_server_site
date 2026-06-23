@@ -3,6 +3,9 @@ import envVars from "../../config/envars";
 import axios from "axios";
 import { PhoneUnlockTransaction } from "./number.model";
 import { User } from "../user/user.model";
+import QueryBuilder from "../utils/queryBuilder";
+import { StatusCodes } from "http-status-codes";
+
 
 const initiatePhoneUnlockPayment = async (req: Request, res: Response) => {
     try {
@@ -92,7 +95,50 @@ const handlePhoneUnlockCallback = async (req: Request, res: Response) => {
     }
 };
 
+const getAllPhoneUnlockTransactions = async (req: Request, res: Response) => {
+    const transactionQuery = new QueryBuilder(
+        PhoneUnlockTransaction.find().populate("buyerUserObjectId").populate("targetUserObjectId"),
+        req.query
+    )
+        .search(["transactionId", "phoneNumber", "status"])
+        .filter()
+        .sort()
+        .paginate()
+        .fields();
+
+    const result = await transactionQuery.modelQuery;
+    const meta = await transactionQuery.countTotal();
+
+    return res.status(StatusCodes.OK).json({
+        success: true,
+        statusCode: StatusCodes.OK,
+        message: "Phone unlock transactions retrieved successfully",
+        meta,
+        data: result,
+    });
+};
+
+const deletePhoneUnlockTransaction = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const transaction = await PhoneUnlockTransaction.findByIdAndDelete(id);
+
+    if (!transaction) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+            success: false,
+            message: "Transaction not found",
+        });
+    }
+
+    return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Transaction deleted successfully",
+        data: transaction,
+    });
+};
+
 export const phoneUnlockPaymentControllers = {
     initiatePhoneUnlockPayment,
-    handlePhoneUnlockCallback
+    handlePhoneUnlockCallback,
+    getAllPhoneUnlockTransactions,
+    deletePhoneUnlockTransaction
 };

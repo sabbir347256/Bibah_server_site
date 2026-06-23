@@ -44,6 +44,7 @@ const UserSchema: Schema<IUser> = new Schema(
         currentCountry: { type: String },
         currentDivision: { type: String },
         currentDistrict: { type: String },
+        homeDistrict: { type: String },
         currentThana: { type: String },
         profileImage: { type: String, default: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png" },
         coverImage: { type: String, default: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png" },

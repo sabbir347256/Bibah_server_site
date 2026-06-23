@@ -72,6 +72,7 @@ export type IUser = {
     permanentDivision: string;
     permanentDistrict: string;
     permanentThana: string;
+    homeDistrict: string;
     role: Role;
     isActive?: IsActive;
     auths: IsAuthProvider[];
