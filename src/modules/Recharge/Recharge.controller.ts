@@ -16,6 +16,19 @@ const initiatePayStationPayment = async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, message: "Invalid amount" });
         }
 
+        const previousApprovedTransaction = await Transaction.findOne({
+            userObjectId,
+            status: "APPROVED"
+        });
+
+        if (!previousApprovedTransaction && Number(amount) < 130) {
+            return res.status(400).json({
+                success: false,
+                message: "প্রথম রিচার্জ সর্বনিম্ন ১৩০ টাকা হতে হবে।"
+            });
+        }
+
+
         const invoiceNumber = `INV-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
         await Transaction.create({
@@ -46,15 +59,10 @@ const initiatePayStationPayment = async (req: Request, res: Response) => {
 
         formData.append('callback_url', `${envVars.BACKEND_URL}/api/v1/transaction/paystation-callback`);
 
-        const response = await axios.post('https://api.paystation.com.bd/initiate-payment', formData, {
+        const response = await axios.post(`${envVars.PAYMENT_URL}/initiate-payment`, formData, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
 
-        // const response = await axios.post('https://sandbox.paystation.com.bd/initiate-payment', formData, {
-        //     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        // });
-
-        // console.log(response.data)
 
         if (response.data.status_code === "200" && response.data.status === "success") {
             return res.status(200).json({

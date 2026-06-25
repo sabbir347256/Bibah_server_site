@@ -10,6 +10,7 @@ import { fieldTransactionRoutes } from "../modules/fieldtransaction/fieldtransac
 import { phoneUnlockPaymentRoutes } from "../modules/contactNumberPayment/number.routes";
 import { premiumPaymentRoutes } from "../modules/premiumefunction/premium.routes";
 import { photoGalleryRoutes } from "../modules/profileImage/image.routes";
+import { requestRoutes } from "../modules/Request/request.routes";
 
 export const router = Router();
 
@@ -57,6 +58,10 @@ const moduleRoutes = [
   {
     path: "/photo-gallery",
     router: photoGalleryRoutes,
+  },
+  {
+    path: "/connection",
+    router: requestRoutes,
   },
 
 ];

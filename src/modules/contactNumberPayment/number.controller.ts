@@ -38,7 +38,7 @@ const initiatePhoneUnlockPayment = async (req: Request, res: Response) => {
         formData.append('opt_a', originUrl);
         formData.append('callback_url', `${envVars.BACKEND_URL}/api/v1/phoneUnlock/callback`);
 
-        const response = await axios.post('https://api.paystation.com.bd/initiate-payment', formData, {
+        const response = await axios.post(`${envVars.PAYMENT_URL}/initiate-payment`, formData, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
 
