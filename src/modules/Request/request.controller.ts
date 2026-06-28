@@ -43,14 +43,15 @@ const sendConnectionRequest = async (req: Request, res: Response, next: NextFunc
         }
 
         const requiredPoints = 7;
-        if (sender.walletPoints >= requiredPoints) {
-            sender.walletPoints -= requiredPoints;
+
+        if (sender.bonusWalletPoints >= requiredPoints) {
+            sender.bonusWalletPoints -= requiredPoints;
         } else {
-            const remainingNeeded = requiredPoints - sender.walletPoints;
+            const remainingNeeded = requiredPoints - (sender.bonusWalletPoints || 0);
             if (sender.mainWalletBalance < remainingNeeded) {
                 throw new appError(StatusCodes.BAD_REQUEST, "Insufficient balance to send request!");
             }
-            sender.walletPoints = 0;
+            sender.bonusWalletPoints = 0;
             sender.mainWalletBalance -= remainingNeeded;
         }
 
@@ -128,10 +129,39 @@ const getPendingRequests = async (req: Request, res: Response, next: NextFunctio
 const getConnectionStatus = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const currentUserId = (req as any).user?.userId;
+        const currentUserRole = (req as any).user?.role;
         const { targetUserId } = req.params as { targetUserId: string };
 
         if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
             throw new appError(StatusCodes.BAD_REQUEST, "Invalid target user ID format.");
+        }
+
+        const targetUser = await User.findById(targetUserId);
+        if (!targetUser) {
+            throw new appError(StatusCodes.NOT_FOUND, "Target user not found.");
+        }
+
+        if (currentUserRole === 'PREMIUM') {
+            return utils.sendResponse(res, {
+                statusCode: StatusCodes.OK,
+                success: true,
+                message: "Full access granted via Premium profile.",
+                data: {
+                    status: "FULL_ACCESS",
+                    isSender: false,
+                    requestId: null,
+                    contactNo: targetUser.contactNo,
+                    email: targetUser.email,
+                    currentThana: targetUser.currentThana,
+                    currentDistrict: targetUser.currentDistrict,
+                    currentDivision: targetUser.currentDivision,
+                    currentCountry: targetUser.currentCountry,
+                    permanentThana: targetUser.permanentThana,
+                    permanentDistrict: targetUser.permanentDistrict,
+                    permanentDivision: targetUser.permanentDivision,
+                    permanentCountry: targetUser.permanentCountry
+                }
+            });
         }
 
         const request = await ConnectionRequest.findOne({
@@ -140,11 +170,6 @@ const getConnectionStatus = async (req: Request, res: Response, next: NextFuncti
                 { senderId: new mongoose.Types.ObjectId(targetUserId), receiverId: new mongoose.Types.ObjectId(currentUserId) }
             ]
         }).lean();
-
-        const targetUser = await User.findById(targetUserId);
-        if (!targetUser) {
-            throw new appError(StatusCodes.NOT_FOUND, "Target user not found.");
-        }
 
         const hasUnlockedPhone = await mongoose.model('PhoneUnlockTransaction').findOne({
             buyerUserObjectId: new mongoose.Types.ObjectId(currentUserId),
