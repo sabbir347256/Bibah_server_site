@@ -11,6 +11,7 @@ import { phoneUnlockPaymentRoutes } from "../modules/contactNumberPayment/number
 import { premiumPaymentRoutes } from "../modules/premiumefunction/premium.routes";
 import { photoGalleryRoutes } from "../modules/profileImage/image.routes";
 import { requestRoutes } from "../modules/Request/request.routes";
+import { MeetupRoutes } from "../modules/meetup/meetup.routes";
 
 export const router = Router();
 
@@ -62,6 +63,10 @@ const moduleRoutes = [
   {
     path: "/connection",
     router: requestRoutes,
+  },
+  {
+    path: "/meetup",
+    router: MeetupRoutes,
   },
 
 ];
