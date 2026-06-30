@@ -6,6 +6,7 @@ import { User } from '../user/user.model';
 import { IsActive } from '../user/user.interface';
 import appError from '../../errorsHelper/appError';
 import envVars from '../../config/envars';
+
 export const checkAuth =
   (...restRole: string[]) =>
     async (req: Request, res: Response, next: NextFunction) => {
