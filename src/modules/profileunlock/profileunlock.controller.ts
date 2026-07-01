@@ -7,6 +7,7 @@ import { utils } from "../utils/utils";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import { PhoneUnlockTransaction } from "../contactNumberPayment/number.model";
+import envVars from "../../config/envars";
 
 const unlockProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -175,7 +176,7 @@ const getProfileDetails = async (req: Request, res: Response, next: NextFunction
 
             if (token && token !== "null" && token !== "undefined") {
                 try {
-                    const secretKey = process.env.JWT_ACCESS_SECRET || "secret";
+                    const secretKey = envVars.JWT_ACCESS_SECRET || "secret";
                     const decoded = jwt.verify(token, secretKey as string) as any;
                     viewerId = decoded?.userId || decoded?.id || decoded?._id || decoded?.data?._id;
 
