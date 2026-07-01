@@ -728,6 +728,12 @@ const getDashboardStats = async (req: Request, res: Response) => {
     try {
         const counts = await User.aggregate([
             {
+                $match: {
+                    isDeleted: false,
+                    role : 'USER'
+                }
+            },
+            {
                 $facet: {
                     roleCounts: [
                         { $group: { _id: "$role", count: { $sum: 1 } } }
@@ -777,6 +783,7 @@ const getDashboardStats = async (req: Request, res: Response) => {
         const monthlyRegistration = await User.aggregate([
             {
                 $match: {
+                    isDeleted: false,
                     createdAt: { $gte: twelveMonthsAgo }
                 }
             },
