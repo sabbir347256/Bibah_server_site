@@ -122,6 +122,9 @@ const paystationCallback = async (req: Request, res: Response) => {
             const updateFields: any = {
                 $inc: {
                     mainWalletBalance: amountToAdd
+                },
+                $set: {
+                    isActive: "ACTIVE" 
                 }
             };
 
@@ -155,6 +158,7 @@ const paystationCallback = async (req: Request, res: Response) => {
         );
     }
 };
+
 // const paystationCallback = async (req: Request, res: Response) => {
 
 //     try {
