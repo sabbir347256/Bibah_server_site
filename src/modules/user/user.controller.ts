@@ -621,6 +621,7 @@ const searchProfiles = async (req: Request, res: Response, next: NextFunction) =
             ...query,
             ...cleanedQueryObj,
             role: { $nin: ["AGENT", "ADMIN"] },
+            isDeleted: false,
         };
 
         const searchableFields = ["fullName", "userID", "email", "profession"];
